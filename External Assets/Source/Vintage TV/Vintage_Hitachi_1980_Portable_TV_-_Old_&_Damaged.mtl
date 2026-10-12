@@ -1,0 +1,10 @@
+newmtl PreViz
+Kd 1 1 1
+d 1
+illum 2
+map_Kd images/Portable_TV_albedo.jpg
+map_Bump images/Portable_TV_normal.jpg
+Ks 1 1 1
+Ns 0
+map_Ns images/Portable_TV_roughness.jpg
+

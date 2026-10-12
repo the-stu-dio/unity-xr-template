@@ -1,0 +1,14 @@
+{
+    "name": "StudioXR.HandPoseTool",
+    "rootNamespace": "StudioXR.HandPose",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

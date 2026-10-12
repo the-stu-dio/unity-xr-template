@@ -1,0 +1,26 @@
+{
+    "name": "StudioXR.HandPoseTool.Editor.Tests",
+    "rootNamespace": "StudioXR.HandPose.Tests",
+    "references": [
+        "StudioXR.HandPoseTool",
+        "StudioXR.HandPoseTool.Editor"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
