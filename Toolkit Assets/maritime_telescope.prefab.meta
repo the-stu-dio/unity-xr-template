@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 256d30963b1bc3c44a0463cc722110fd
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 324010
+  packageName: Maritime Telescope
+  packageVersion: 1.0
+  assetPath: Assets/Maritime Telescope/URP & Built-In/URP/Prefabs/maritime_telescope.prefab
+  uploadId: 948524

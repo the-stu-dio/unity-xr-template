@@ -1,0 +1,178 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-1354052958530723697
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 10
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_OceanWater
+  m_Shader: {fileID: -6465566751694194690, guid: d17a14960bf347545ad50aa79b9012e6, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _PERSPECTIVE
+  - _REFLECTIONS
+  - _WORLD_SPACE_UV
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap: {}
+  disabledShaderPasses:
+  - MOTIONVECTORS
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BoillingNormalTex:
+        m_Texture: {fileID: 2800000, guid: 834c2a530966bd34eb9762c13c919276, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CaveTexture:
+        m_Texture: {fileID: 2800000, guid: cc833db1ba1caeb4bb10ff0a50364204, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _IntersectionFoamTexture:
+        m_Texture: {fileID: 2800000, guid: 834c2a530966bd34eb9762c13c919276, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalTexture:
+        m_Texture: {fileID: 2800000, guid: 4d05f2fcdedc26a45bfd85622f986c51, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _PlanarReflectionTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RippleTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SampleTexture2D_47d08f7c602646d7948e7c8b5ddace98_Texture_1_Texture2D:
+        m_Texture: {fileID: 2800000, guid: 8b6c9ad41a8b59846b0979cc8653d320, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SecondaryFoamTex:
+        m_Texture: {fileID: 2800000, guid: 201c88b071ee1ab49a42d47a51409268, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Skybox:
+        m_Texture: {fileID: 8900000, guid: c8f21f62fdb3e43c5b32917c84683698, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SurfaceFoamTexture:
+        m_Texture: {fileID: 2800000, guid: 201c88b071ee1ab49a42d47a51409268, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _A_SHORT_HIKE_MODE: 0
+    - _BOILING: 0
+    - _BoilingSpeed: 0
+    - _BoilingStrength: 1
+    - _BoilingTiling: 0
+    - _CaveBlend: 0
+    - _CaveDistortion: 0
+    - _DepthCompareDistance: 0.1
+    - _DepthFadeDistance: 12
+    - _FoamBlend: 0.12
+    - _FresnelPower: 1.5
+    - _GradientRefractionScale: 10
+    - _HorizonDistance: 140
+    - _Hue: 1
+    - _IntersectionFoamBlend: 1.1
+    - _IntersectionFoamCutoff: 2.8
+    - _IntersectionFoamDepth: 2
+    - _IntersectionFoamDirection: 1
+    - _IntersectionFoamFade: 1.5
+    - _IntersectionFoamSpeed: 0.18
+    - _IntersectionFoamTiling: 1.3
+    - _LightingHardness: 0.15
+    - _LightingSmoothness: 10
+    - _NormalScale: 4.2
+    - _NormalSpeed: 0.22
+    - _NormalStrength: 1.45
+    - _OrthographicCamSize: 0
+    - _PERSPECTIVE: 1
+    - _PosterizeSteps: 0
+    - _QueueControl: 1
+    - _QueueOffset: -49
+    - _REFLECTIONS: 1
+    - _ReflectionBlend: 0.42
+    - _ReflectionDistortion: 0.45
+    - _RefractionScale: 10
+    - _RefractionSpeed: 0.02
+    - _RefractionStrength: 0.01
+    - _RippleStrength: 83.62
+    - _Saturation: 1
+    - _SecondaryFoamBlend: 0.08
+    - _Show: 0
+    - _SkyboxForce: 1.8
+    - _Steps: 1
+    - _SurfaceFoamDirection: 0.8
+    - _SurfaceFoamDistorsion: 0.65
+    - _SurfaceFoamSpeed: -0.07
+    - _SurfaceFoamTiling: 1.8
+    - _TileSize: 200
+    - _Value: 1
+    - _WORLD_SPACE_UV: 1
+    - _WaterAlpha: 1
+    - _WaterMetallic: 0.45
+    - _WaterSmoothness: 0.38
+    - _WaveLength: 0.95
+    - _WaveRiverLength: 0.73
+    - _WaveRiverWidth: 0.75
+    - _WaveSpeed: 0.35
+    - _WaveSteepness: 3.8
+    - _WaveStepness: 0.35
+    - _WaveTileSize: 0.9
+    m_Colors:
+    - _BaseColor: {r: 0.045, g: 0.095, b: 0.165, a: 1}
+    - _CaveColor: {r: 0.02, g: 0.04, b: 0.08, a: 0}
+    - _CaveOffset: {r: -0.45, g: 0, b: 0, a: 0}
+    - _CaveScale: {r: 0.01, g: 0.01, b: 0, a: 0}
+    - _CaveSecondaryColor: {r: 0, g: 0, b: 0, a: 0}
+    - _DeepColor: {r: 0.038, g: 0.082, b: 0.165, a: 1}
+    - _FoamUVsOffset: {r: 1, g: 1, b: 0, a: 0}
+    - _FresnelColor: {r: 0.38, g: 0.48, b: 0.60, a: 0.5}
+    - _HorizonColor: {r: 0.28, g: 0.39, b: 0.52, a: 1}
+    - _IntersectionFoamColor: {r: 0.85, g: 0.92, b: 0.98, a: 0.85}
+    - _PositionRipples: {r: 0, g: 0, b: 0, a: 0}
+    - _SecondaryFoamColor: {r: 0.40, g: 0.50, b: 0.62, a: 0.35}
+    - _ShallowColor: {r: 0.065, g: 0.138, b: 0.245, a: 1}
+    - _SpecularColor: {r: 0.25, g: 0.32, b: 0.42, a: 0.25}
+    - _SurfaceFoamColor: {r: 0.85, g: 0.92, b: 0.98, a: 0.55}
+    - _TopColor: {r: 0.05, g: 0.11, b: 0.20, a: 0.5}
+    - _UV: {r: 0, g: 0, b: 0, a: 0}
+    - _UVRipples: {r: 0, g: 0, b: 0, a: 0}
+    - _WaveDirections: {r: 7.5, g: 4.2, b: 2.8, a: 1.2}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

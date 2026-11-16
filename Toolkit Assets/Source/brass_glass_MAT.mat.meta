@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c8913d7b30684a64ca9af294b86d7b17
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 324010
+  packageName: Maritime Telescope
+  packageVersion: 1.0
+  assetPath: Assets/Maritime Telescope/URP & Built-In/URP/Materials/brass_glass_MAT.mat
+  uploadId: 948524

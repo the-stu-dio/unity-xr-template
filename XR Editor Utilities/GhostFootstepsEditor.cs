@@ -253,7 +253,7 @@ public class GhostFootstepsEditor : Editor
             if (t is GhostFootsteps gf)
             {
                 Vector3 origin = gf.transform.position;
-                Vector3 dest = gf.Destination != null ? gf.Destination.position : origin + Vector3.forward * 10f;
+                Vector3 dest = gf.HasDestination ? gf.DestinationPosition : origin + Vector3.forward * 10f;
                 GhostFootsteps.EnsureNavMesh(origin, dest, forceRebuild: true);
                 gf.BakeNavPath(forceNavRebuild: true);
                 EditorUtility.SetDirty(gf);

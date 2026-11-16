@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 38e4250b7c1788c47a4566d6df651faa
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 324010
+  packageName: Maritime Telescope
+  packageVersion: 1.0
+  assetPath: Assets/Maritime Telescope/URP & Built-In/URP/Materials/leather_MAT.mat
+  uploadId: 948524
