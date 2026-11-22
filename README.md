@@ -127,7 +127,7 @@ An Editor utility for quickly configuring new or existing Unity projects for the
 ### Installation
 Choose your preferred installation method:
 
-* **Option A: In-Editor Setup (Self-Healing Assembly Isolation)**
+* **Option A: In-Editor Setup**
   1. Copy or clone the `stu-dio XR Template` folder into your project's `Assets/` folder.
   2. Open your project in Unity 6.
   3. Thanks to isolated Assembly Definitions (`.asmdef`) and `defineConstraints`, `StudioXR.Installer.Editor` compiles independently without errors even if packages are missing. Unity will automatically prompt you on launch to run the 1-Click Setup, or you can select **Studio XR > Project Setup & Package Installer** from the top menu.
@@ -147,7 +147,7 @@ Choose your preferred installation method:
      ```
   2. Unity automatically resolves and imports all dependencies declared in `package.json` before compiling. 
 
-#### "How do I add VR to my project?"
+#### "How do I add VR to my existing project?"
 You can configure all required XR packages, interaction layers, and template assets automatically using the built-in One-Click utility:
 
 1. Copy or clone the `stu-dio XR Template` folder into your project's `Assets/` folder.
@@ -161,6 +161,10 @@ You can configure all required XR packages, interaction layers, and template ass
    * Imports the XRI **Starter Assets** sample and **TextMesh Pro Essential Resources**.
    * Automatically configures the `Teleport` interaction layer (Layer 31) in `InteractionLayerSettings`.
 5. *(Optional)* Click **Install Meta XR SDK** under the **Optional Platform SDKs** card (or select `Studio XR > Install Meta XR SDK (Optional)` from the top menu bar) to configure Meta's official package registry and install the Meta XR Core SDK (`com.meta.xr.sdk.core`).
+
+#### "How do I set up a new project, using the stu/dio Template?"
+1. You can choose the "VR Template" project when creating a new project in Unity, then follow the previous instructions.
+2. I plan to create a simple project creation script soon.
 
 #### "How do I add a VR player character to my scene?"
 1. In the Project window, locate `Studio XR Rig.prefab` in `Assets/stu-dio XR Template/XR Prefabs/`.
@@ -179,25 +183,6 @@ You can configure all required XR packages, interaction layers, and template ass
 
 Remove the simulator prefab before building for an XR device, or enable **Use XR Interaction Simulator in scenes** under **Edit > Project Settings > XR Plug-in Management > XR Interaction Toolkit** for Editor-only automatic setup.
 
-#### "How do I add interaction indicators to my scene?"
-1. Locate `Left Hand Affordance.prefab` in `XR Affordances/Hand Indicator/`.
-2. Drag the prefab into your scene as a child (or sibling) of your interactable object (e.g. a valve, handle, or tool).
-3. Orient and position the ghost hand to show the desired grasp posture.
-4. On the `HandIndicator` component:
-   * **Interactable:** Leave blank to auto-detect the nearest `XRBaseInteractable`, or manually assign.
-   * **Conditional Fade:** Check `Show When Focused`, `Show When Gazed`, and/or `Show When In Proximity`.
-   * **Thresholds:** Adjust `Proximity Threshold` (default `1.5m`) and `Gaze Facing Threshold` (default `0.85` dot product).
-
-#### "How do I add footstep indicators to my scene?"
-1. Create an empty GameObject and add a `SplineContainer` component (`GameObject > Spline > Draw Spline`).
-2. Add the `GhostFootsteps` component to the same GameObject.
-3. Select your **Footstep Mode**:
-   * **`Static`:** Ambient looping path.
-   * **`Reactive`:** Wayfinding trail that activates when the player gazes toward or approaches the start point.
-   * **`Dynamic`:** Real-time pathfinding to an assigned destination transform using Unity NavMesh.
-4. Tune **Step Count**, **Step Width**, and **Loop Duration** in the inspector.
-
-
 #### "How do I move without my controllers?"
 1. Open your scene with an `XR Origin (XR Rig)` containing hand tracking.
 2. In the Unity menu, select:
@@ -210,6 +195,27 @@ Remove the simulator prefab before building for an XR device, or enable **Use XR
    * Creates `Right Hand Stabilized Origin` with `XRTransformStabilizer`.
    * Configures `Finger Gun Teleport Interactor` (`XRRayInteractor` with strict raycast settings and teleport layers).
    * Creates `Gesture Teleportation Provider` under `Locomotion` with `GestureTeleportDriver`.
+
+#### "How do I add interaction indicators to my scene?"
+1. Locate `Left Hand Affordance.prefab` in `XR Affordances/Hand Indicator/`.
+2. Drag the prefab into your scene as a child (or sibling) of your interactable object (e.g. a valve, handle, or tool).
+3. Orient and position the ghost hand to show the desired grasp posture.
+4. On the `HandIndicator` component:
+   * **Interactable:** Leave blank to auto-detect the nearest `XRBaseInteractable`, or manually assign.
+   * **Conditional Fade:** Check `Show When Focused`, `Show When Gazed`, and/or `Show When In Proximity`.
+   * **Thresholds:** Adjust `Proximity Threshold` (default `1.5m`) and `Gaze Facing Threshold` (default `0.85` dot product).
+
+#### "How do I pose the Ghost Hand affordances?"
+1. I haven't added that yet! (Unity has a Hand Pose capture tool that you can use in the meantime.)
+
+#### "How do I add footstep indicators to my scene?"
+1. Create an empty GameObject and add a `SplineContainer` component (`GameObject > Spline > Draw Spline`).
+2. Add the `GhostFootsteps` component to the same GameObject.
+3. Select your **Footstep Mode**:
+   * **`Static`:** Ambient looping path.
+   * **`Reactive`:** Wayfinding trail that activates when the player gazes toward or approaches the start point.
+   * **`Dynamic`:** Real-time pathfinding to an assigned destination transform using Unity NavMesh.
+4. Tune **Step Count**, **Step Width**, and **Loop Duration** in the inspector.
 
 #### "How do I make an object pluckable?"
 1. Add a `Rigidbody` and an `XRGrabInteractable` to your object (e.g. flower, mushroom, or tool).
