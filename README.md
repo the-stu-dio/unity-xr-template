@@ -6,18 +6,39 @@ Developed by the **Game Studies and Design stu/dio (GSD stu/dio)** at the Univer
 
 ---
 
-## General Layout
+## Preamble
 
-* **`XR Affordances/`:** Reusable XR interaction guidance.
-* **`XR Controller Extensions/`:** Optional XR interaction and locomotion extensions.
-* **`XR Editor Utilities/`:** Unity Editor tools and custom inspectors for configuring XR toolkit features.
-* **`XR Prefabs/`:** Ready-to-use XR interaction prefabs.
-* **`Scenes/`:** Example and template scenes.
-* **`Template Assets/`:** Supporting environment assets and materials for building a sample XR experience.
+The goal of this template is to help YOU get launched into the development of a VR application quickly and frictionlessly. It provides pre-built components for various XR interactions, and sits on top of what Unity already provides.
+
+One thing to note - as you are developing the VR features necessary for your game, in most cases, Unity expects you to *extend* their systems, rather than providing out-of-the-box solutions. That being said, Unity's XRI framework is, in places, spotty and inconsistent. Major systems are deprecated, and some systems are outright broken. This template accepts that, and attempts to push through these barriers. In several cases, I have vibecoded my way through them.
+
+My sincere apologies for any code/documentation that has been obscured/made unclear by the use of agentic AI. **Please exercise your own judgement as you put weight on these systems.** If you are looking for robustness, err on the side of writing (or rewriting) code where you see limitations, rather than accepting what is on the page... However! I have done my best to make the provided assets as plug-and-play as possible.
+
+As a final note, I have provided both a generic and situated template scene in this toolkit. Please, take a moment to play through the experience before you start your project. As you do, reflect on which systems, interactions, or areas were most impactful on you as a player. Specifically, try to examine the areas that *do not have any additional XR features* but are still impactful. This is where you can make a real impact on a player. You do not need much to make VR impressive, innovative, or transformative. If you are slamming your head against a wall trying to develop a complicated system, consider how you could achieve the same outcome with a little bit of clever design.
+
+As Dan Cermak, the stu-dio's Director, taught me, in game development, where you *can* cheat, you *must* cheat. If something works, regardless of how elegant it is, that is much, much better than having a half-baked version of the most perfect infrastructure known to man. Before you spend time, compute, or brain power on something, *try to find out if someone has already done it* whether that is on Github, the Unity Asset Store, or even in another project that the stu-dio has worked on. And if you find something, let me know, and I'll make sure it gets packaged in with the toolkit in the next version.
+
+If you have any questions about the toolkit, or would like to contribute pre-existing assets to the stu-dio's repertoire, feel free to email me at davidah3@illinois.edu, and I'll get back to you as soon as possible.
+
+- David
 
 ---
 
-## Major Features
+## General Layout
+
+All Template files live in the "stu-dio XR Template folder." Most actual XRI functionality is derived from Unity's XRI toolkit assets (which can be installed with the "One Click" installer in the Studio XR tab in the Editor.) Several tools from Unity's VRTemplate Starter Project have been included alongside the project, but the VRTemplate itself is not a dependency. If you would like to utilize more of Unity's template's features, you, of course, can start a project with the Template before installing the stu-dio Template.
+
+* **`Scenes/`:** stu-dio Template and Generic Template scenes, for viewing an "in-context" example vs. generic asset usage
+* **`XR Affordances/`:** In-world indicators for desired XR interaction
+* **`XR Controller Extensions/`:** Optional XR interaction and locomotion extensions
+* **`XR Editor Utilities/`:** Unity Editor tools and custom inspectors for configuring toolkit features
+* **`XR Prefabs/`:** Ready-to-use XR interaction prefabs, including a stu-dio XR Rig
+* **`XR Assets/`:** Useful scripts, prefabs, and assets/dependencies for XR Prefabs (trim assets that are unneeded for your project!)
+* **`Template Assets/`:** Supporting environment assets and materials for our "in-context" VR example experience
+
+---
+
+## Major Features (here be GenAI)
 
 ### 1. XR Affordances
 
@@ -69,6 +90,12 @@ Editor utilities to improve the experience of implementing affordances into an X
 * **Ghost Footsteps Setup (GhostFootstepsEditor.cs):**
   * Provides a custom Inspector for selecting guidance modes, configuring reactive or dynamic navigation settings, rebuilding static paths, and tuning visuals and animation.
 
+### 4. XR Package Installer
+An Editor utility for quickly configuring new or existing Unity projects for the toolkit.
+* **One-Click Setup:** Installs or updates required Unity packages, configures the `Teleport` interaction layer, imports XRI Starter Assets and TextMesh Pro essentials, and refreshes package dependencies.
+* **Meta XR Support:** Optionally configures Meta's package registry and installs the Meta XR SDK Core package.
+* **Compatibility Checks:** Detects missing packages and starter assets, reports setup status in the Editor, and prompts to open the setup utility when the project is opened.
+
 ---
 
 ## Getting Started
@@ -90,6 +117,7 @@ Editor utilities to improve the experience of implementing affordances into an X
 
 ### 1. Importing the Unity XRI Toolkit Assets into an Existing Project (1-Click Setup)
 
+#### "How do I add VR to my project?"
 You can configure all required XR packages, interaction layers, and template assets automatically using the built-in One-Click utility:
 
 1. Copy or clone the `stu-dio XR Template` folder into your project's `Assets/` folder.
@@ -106,6 +134,7 @@ You can configure all required XR packages, interaction layers, and template ass
 
 ### 2. Installing the XRI Character Controller Simulator
 
+#### "How do I test my project without a VR headset?"
 1. Open **Window > Package Manager** and select the **XR Interaction Toolkit** package.
 2. In the package's **Samples** section, click **Import** next to **XR Interaction Simulator**.
 3. In the Project window, open `Assets/Samples/XR Interaction Toolkit/<version>/XR Interaction Simulator/`.
@@ -117,6 +146,7 @@ Remove the simulator prefab before building for an XR device, or enable **Use XR
 
 ### 3. Adding a Ghost Hand Affordance to an Interactable
 
+#### "How do I add interaction indicators to my scene?"
 1. Locate `Left Hand Affordance.prefab` in `XR Affordances/Hand Indicator/`.
 2. Drag the prefab into your scene as a child (or sibling) of your interactable object (e.g. a valve, handle, or tool).
 3. Orient and position the ghost hand to show the desired grasp posture.
@@ -127,6 +157,7 @@ Remove the simulator prefab before building for an XR device, or enable **Use XR
 
 ### 4. Setting Up Finger Gun Teleportation (1-Click)
 
+#### "How do I move without my controllers?"
 1. Open your scene with an `XR Origin (XR Rig)` containing hand tracking.
 2. In the Unity menu, select:
    ```text
@@ -141,6 +172,7 @@ Remove the simulator prefab before building for an XR device, or enable **Use XR
 
 ### 5. Adding Spline Wayfinding Footsteps
 
+#### "How do I add footstep indicators to my scene?"
 1. Create an empty GameObject and add a `SplineContainer` component (`GameObject > Spline > Draw Spline`).
 2. Add the `GhostFootsteps` component to the same GameObject.
 3. Select your **Footstep Mode**:
@@ -156,3 +188,4 @@ Remove the simulator prefab before building for an XR device, or enable **Use XR
 * **Managing Entity:** Game Studies and Design stu/dio (GSD stu/dio)
 * **Institution:** University of Illinois Urbana-Champaign (UIUC)
 * **Repository:** [https://github.com/the-stu-dio/unity-xr-template](https://github.com/the-stu-dio/unity-xr-template)
+* **Programming Lead** David A. Hopping (davidah3@illinois.edu)
