@@ -6,14 +6,23 @@
     Meta scoped package registry before opening Unity, avoiding all initial compile errors.
 #>
 
-$manifestPath = Join-Path $PSScriptRoot "Packages\manifest.json"
+# 0. Automatically resolve Unity project root (works from repo subfolder or project root)
+$projectRoot = $PSScriptRoot
+while ($projectRoot -and -not (Test-Path (Join-Path $projectRoot "Packages\manifest.json"))) {
+    $parent = Split-Path $projectRoot -Parent
+    if ($parent -eq $projectRoot) { break }
+    $projectRoot = $parent
+}
+
+$manifestPath = Join-Path $projectRoot "Packages\manifest.json"
 
 if (-not (Test-Path $manifestPath)) {
-    Write-Error "[Studio XR] manifest.json not found at: $manifestPath"
+    Write-Error "[Studio XR] manifest.json not found relative to: $PSScriptRoot"
     exit 1
 }
 
 Write-Host "== stu/dio XR Template: Pre-Flight Package Setup ==" -ForegroundColor Cyan
+Write-Host "Project Root: $projectRoot" -ForegroundColor DarkGray
 
 $requiredPackages = @{
     "com.unity.xr.interaction.toolkit"   = "3.5.1"
@@ -73,10 +82,14 @@ $newJson = $manifest | ConvertTo-Json -Depth 10
 Set-Content -Path $manifestPath -Value $newJson -Encoding UTF8
 
 # 4. Deploy pre-configured OpenXR and XRI template settings to prevent worker crashes
-$templateSettingsDir = Join-Path $PSScriptRoot "Assets\stu-dio XR Template\XR Assets\Template Settings"
+$templateSettingsDir = Join-Path $PSScriptRoot "XR Assets\Template Settings"
+if (-not (Test-Path $templateSettingsDir)) {
+    $templateSettingsDir = Join-Path $projectRoot "Assets\stu-dio XR Template\XR Assets\Template Settings"
+}
+
 if (Test-Path $templateSettingsDir) {
     $srcXr = Join-Path $templateSettingsDir "XR"
-    $dstXr = Join-Path $PSScriptRoot "Assets\XR"
+    $dstXr = Join-Path $projectRoot "Assets\XR"
     $openXrAsset = Join-Path $dstXr "Settings\OpenXR Package Settings.asset"
     if ((Test-Path $srcXr) -and (-not (Test-Path $openXrAsset))) {
         Copy-Item -Path $srcXr -Destination $dstXr -Recurse -Force
@@ -84,14 +97,14 @@ if (Test-Path $templateSettingsDir) {
     }
 
     $srcXri = Join-Path $templateSettingsDir "XRI"
-    $dstXri = Join-Path $PSScriptRoot "Assets\XRI"
+    $dstXri = Join-Path $projectRoot "Assets\XRI"
     $layerAsset = Join-Path $dstXri "Settings\Resources\InteractionLayerSettings.asset"
     if ((Test-Path $srcXri) -and (-not (Test-Path $layerAsset))) {
         Copy-Item -Path $srcXri -Destination $dstXri -Recurse -Force
         Write-Host "Deployed pre-configured XRI interaction layer settings to Assets\XRI." -ForegroundColor Cyan
     }
 } else {
-    $xrDir = Join-Path $PSScriptRoot "Assets\XR"
+    $xrDir = Join-Path $projectRoot "Assets\XR"
     if (-not (Test-Path $xrDir)) {
         New-Item -ItemType Directory -Path $xrDir -Force | Out-Null
         Write-Host "Created Assets\XR directory." -ForegroundColor Cyan
