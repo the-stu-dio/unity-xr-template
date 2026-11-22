@@ -339,9 +339,10 @@ namespace StudioXR.Editor
             // 1. Deploy XR settings (OpenXR package settings, loaders, simulation)
             string sourceXr = Path.Combine(templateSettingsDir, "XR");
             string targetXr = Path.Combine(Application.dataPath, "XR");
-            string targetOpenXrSettings = Path.Combine(targetXr, "Settings", "OpenXR Package Settings.asset");
+            string targetOpenXrSettings1 = Path.Combine(targetXr, "Settings", "OpenXRPackageSettings.asset");
+            string targetOpenXrSettings2 = Path.Combine(targetXr, "Settings", "OpenXR Package Settings.asset");
 
-            if (Directory.Exists(sourceXr) && (overwriteExisting || !File.Exists(targetOpenXrSettings)))
+            if (Directory.Exists(sourceXr) && (overwriteExisting || (!File.Exists(targetOpenXrSettings1) && !File.Exists(targetOpenXrSettings2))))
             {
                 CopyDirectoryRecursive(sourceXr, targetXr);
                 deployedAny = true;
@@ -541,7 +542,7 @@ namespace StudioXR.Editor
             sb.Append("  }");
 
             string newText = text.Substring(0, braceOpen) + sb.ToString() + text.Substring(braceClose + 1);
-            File.WriteAllText(manifestPath, newText);
+            File.WriteAllText(manifestPath, newText, new System.Text.UTF8Encoding(false));
             return true;
         }
 
@@ -565,7 +566,7 @@ namespace StudioXR.Editor
                     string comma = hasExistingEntries ? "," : "";
                     string metaEntry = "\n    {\n      \"name\": \"" + MetaRegistryName + "\",\n      \"url\": \"" + MetaRegistryUrl + "\",\n      \"scopes\": [\n        \"" + MetaRegistryScope + "\"\n      ]\n    }" + comma;
                     string updated = text.Insert(bracketOpen + 1, metaEntry);
-                    File.WriteAllText(manifestPath, updated);
+                    File.WriteAllText(manifestPath, updated, new System.Text.UTF8Encoding(false));
                     return true;
                 }
             }
@@ -575,7 +576,7 @@ namespace StudioXR.Editor
             {
                 string scopedBlock = "\n  \"scopedRegistries\": [\n    {\n      \"name\": \"" + MetaRegistryName + "\",\n      \"url\": \"" + MetaRegistryUrl + "\",\n      \"scopes\": [\n        \"" + MetaRegistryScope + "\"\n      ]\n    }\n  ],";
                 string updated = text.Insert(rootOpen + 1, scopedBlock);
-                File.WriteAllText(manifestPath, updated);
+                File.WriteAllText(manifestPath, updated, new System.Text.UTF8Encoding(false));
                 return true;
             }
 
@@ -890,6 +891,7 @@ namespace StudioXR.Editor
             {
                 string destFile = Path.Combine(targetDir, Path.GetFileName(file));
                 File.Copy(file, destFile, true);
+                try { File.SetLastWriteTimeUtc(destFile, DateTime.UtcNow); } catch { }
             }
 
             foreach (string subDir in Directory.GetDirectories(sourceDir))

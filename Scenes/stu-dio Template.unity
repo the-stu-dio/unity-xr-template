@@ -3465,11 +3465,14 @@ Material:
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
+  m_DoubleSidedGI: 1
   m_CustomRenderQueue: 3000
   stringTagMap:
     RenderType: Transparent
-  disabledShaderPasses: []
+  disabledShaderPasses:
+  - DepthOnly
+  - SHADOWCASTER
+  - MOTIONVECTORS
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
@@ -3502,7 +3505,7 @@ Material:
     - _ZWrite: 0
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 0.6}
-    - _Color: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 0.6}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!23 &671969569
@@ -8973,7 +8976,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 905d6563ddd1fc344b5bdc8b2caa2ff5, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.9129944
+      value: -2.23
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 905d6563ddd1fc344b5bdc8b2caa2ff5, type: 3}
       propertyPath: m_LocalPosition.y
@@ -8981,7 +8984,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 905d6563ddd1fc344b5bdc8b2caa2ff5, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.86001587
+      value: -5.04
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 905d6563ddd1fc344b5bdc8b2caa2ff5, type: 3}
       propertyPath: m_LocalRotation.w
@@ -13165,6 +13168,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 3.556
       objectReference: {fileID: 0}
+    - target: {fileID: 5979971412621207406, guid: cf86363e121044245b7f90bebcbf2b0c, type: 3}
+      propertyPath: m_VideoClip
+      value: 
+      objectReference: {fileID: 32900000, guid: f4f8ec66badca5e4ca5dc2ba67c2bc36, type: 3}
     - target: {fileID: 5980060215253717249, guid: cf86363e121044245b7f90bebcbf2b0c, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0

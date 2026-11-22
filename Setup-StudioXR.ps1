@@ -77,9 +77,10 @@ foreach ($pkg in $requiredPackages.GetEnumerator()) {
     }
 }
 
-# 3. Save Updated manifest.json
+# 3. Save Updated manifest.json (strictly UTF-8 without BOM to prevent Unity UPM parse errors)
 $newJson = $manifest | ConvertTo-Json -Depth 10
-Set-Content -Path $manifestPath -Value $newJson -Encoding UTF8
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($manifestPath, $newJson, $utf8NoBom)
 
 # 4. Deploy pre-configured OpenXR and XRI template settings to prevent worker crashes
 $templateSettingsDir = Join-Path $PSScriptRoot "XR Assets\Template Settings"
@@ -90,9 +91,12 @@ if (-not (Test-Path $templateSettingsDir)) {
 if (Test-Path $templateSettingsDir) {
     $srcXr = Join-Path $templateSettingsDir "XR"
     $dstXr = Join-Path $projectRoot "Assets\XR"
-    $openXrAsset = Join-Path $dstXr "Settings\OpenXR Package Settings.asset"
-    if ((Test-Path $srcXr) -and (-not (Test-Path $openXrAsset))) {
-        Copy-Item -Path $srcXr -Destination $dstXr -Recurse -Force
+    $openXrAsset1 = Join-Path $dstXr "Settings\OpenXRPackageSettings.asset"
+    $openXrAsset2 = Join-Path $dstXr "Settings\OpenXR Package Settings.asset"
+    if ((Test-Path $srcXr) -and (-not (Test-Path $openXrAsset1)) -and (-not (Test-Path $openXrAsset2))) {
+        if (-not (Test-Path $dstXr)) { New-Item -ItemType Directory -Path $dstXr -Force | Out-Null }
+        Copy-Item -Path (Join-Path $srcXr "*") -Destination $dstXr -Recurse -Force
+        Get-ChildItem -Path $dstXr -Recurse | ForEach-Object { $_.LastWriteTime = (Get-Date) }
         Write-Host "Deployed pre-configured OpenXR settings to Assets\XR." -ForegroundColor Cyan
     }
 
@@ -100,7 +104,9 @@ if (Test-Path $templateSettingsDir) {
     $dstXri = Join-Path $projectRoot "Assets\XRI"
     $layerAsset = Join-Path $dstXri "Settings\Resources\InteractionLayerSettings.asset"
     if ((Test-Path $srcXri) -and (-not (Test-Path $layerAsset))) {
-        Copy-Item -Path $srcXri -Destination $dstXri -Recurse -Force
+        if (-not (Test-Path $dstXri)) { New-Item -ItemType Directory -Path $dstXri -Force | Out-Null }
+        Copy-Item -Path (Join-Path $srcXri "*") -Destination $dstXri -Recurse -Force
+        Get-ChildItem -Path $dstXri -Recurse | ForEach-Object { $_.LastWriteTime = (Get-Date) }
         Write-Host "Deployed pre-configured XRI interaction layer settings to Assets\XRI." -ForegroundColor Cyan
     }
 } else {
