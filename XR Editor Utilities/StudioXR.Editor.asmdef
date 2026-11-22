@@ -1,0 +1,43 @@
+{
+    "name": "StudioXR.Editor",
+    "rootNamespace": "StudioXR.Editor",
+    "references": [
+        "StudioXR.Runtime",
+        "Unity.XR.Interaction.Toolkit",
+        "Unity.XR.Interaction.Toolkit.Editor",
+        "Unity.XR.Hands",
+        "Unity.XR.CoreUtils",
+        "Unity.XR.CoreUtils.Editor",
+        "Unity.Splines",
+        "Unity.Splines.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "STUDIO_XR_XRI_PRESENT"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.xr.interaction.toolkit",
+            "expression": "3.0.0",
+            "define": "STUDIO_XR_XRI_PRESENT"
+        },
+        {
+            "name": "com.unity.splines",
+            "expression": "2.6.0",
+            "define": "STUDIO_XR_SPLINES_PRESENT"
+        },
+        {
+            "name": "com.unity.xr.hands",
+            "expression": "1.4.0",
+            "define": "STUDIO_XR_HANDS_PRESENT"
+        }
+    ],
+    "noEngineReferences": false
+}

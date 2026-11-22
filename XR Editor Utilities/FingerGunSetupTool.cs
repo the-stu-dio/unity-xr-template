@@ -1,3 +1,4 @@
+#if STUDIO_XR_HANDS_PRESENT
 using System;
 using System.Linq;
 using UnityEditor;
@@ -528,3 +529,4 @@ namespace StudioXR.Editor
         }
     }
 }
+#endif

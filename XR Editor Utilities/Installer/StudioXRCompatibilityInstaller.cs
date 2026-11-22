@@ -42,6 +42,24 @@ namespace StudioXR.Editor
             }
         }
 
+        public struct SampleRequirement
+        {
+            public string id;
+            public string packageId;
+            public string sampleName;
+            public string friendlyPackageName;
+            public string description;
+
+            public SampleRequirement(string id, string packageId, string sampleName, string friendlyPackageName, string description)
+            {
+                this.id = id;
+                this.packageId = packageId;
+                this.sampleName = sampleName;
+                this.friendlyPackageName = friendlyPackageName;
+                this.description = description;
+            }
+        }
+
         // -----------------------------------------------------------------------------------------
         // Configuration & Requirements List
         // -----------------------------------------------------------------------------------------
@@ -59,6 +77,13 @@ namespace StudioXR.Editor
             new PackageRequirement("com.unity.inputsystem", "Input System", "1.20.0", "1.8.0", "Unity Input System action maps required by XRI behaviors.", true)
         };
 
+        public static readonly SampleRequirement[] RequiredSamples = new[]
+        {
+            new SampleRequirement("xri-starter-assets", "com.unity.xr.interaction.toolkit", "Starter Assets", "XR Interaction Toolkit", "Input action maps, locomotion presets, and tunnel vignette shaders."),
+            new SampleRequirement("xri-hands-demo", "com.unity.xr.interaction.toolkit", "Hands Interaction Demo", "XR Interaction Toolkit", "Ghost hand affordance shaders, filtering scripts, and hand tracking interactors."),
+            new SampleRequirement("xr-hands-visualizer", "com.unity.xr.hands", "HandVisualizer", "XR Hands", "Hand tracking joint prefabs, hand visualizers, and skinned hand meshes.")
+        };
+
         public const string MetaXrSdkPackageId = "com.meta.xr.sdk.core";
         public const string MetaXrSdkRecommendedVersion = "209.0.0";
         public const string MetaRegistryUrl = "https://npm.developer.oculus.com";
@@ -73,6 +98,7 @@ namespace StudioXR.Editor
         // -----------------------------------------------------------------------------------------
 
         private Dictionary<string, string> m_InstalledManifestPackages = new Dictionary<string, string>();
+        private Dictionary<string, bool> m_SampleStatus = new Dictionary<string, bool>();
         private bool m_StarterAssetsImported = false;
         private bool m_TmpImported = false;
         private bool m_TeleportLayerConfigured = false;
@@ -152,12 +178,17 @@ namespace StudioXR.Editor
             installer.RefreshStatus();
 
             bool hasMissingPackages = RequiredPackages.Any(p => p.isCritical && !installer.IsPackageInstalled(p.id));
+            bool hasMissingSamples = RequiredSamples.Any(s => !installer.EvaluateSampleStatus(s.friendlyPackageName, s.sampleName));
 
-            if (hasMissingPackages)
+            if (hasMissingPackages || hasMissingSamples)
             {
+                string msg = hasMissingPackages
+                    ? "The stu/dio XR Template requires XR packages and samples to ensure full compatibility with your project.\n\nWould you like to open the Project Setup utility now?"
+                    : "The stu/dio XR Template requires sample assets (Starter Assets, Hands Interaction Demo, XR Hands Visualizer) for ghost hands, affordance shaders, and rig tracking.\n\nWould you like to open the Project Setup utility now?";
+
                 int choice = EditorUtility.DisplayDialogComplex(
                     "stu/dio XR Template - Project Setup",
-                    "The stu/dio XR Template requires XR packages to ensure compatibility with your project.\n\nWould you like to open the Project Setup utility now?",
+                    msg,
                     "Open Setup Utility",
                     "Later",
                     "Don't Show Again"
@@ -193,7 +224,12 @@ namespace StudioXR.Editor
         public void RefreshStatus()
         {
             m_InstalledManifestPackages = ReadManifestDependencies();
-            m_StarterAssetsImported = EvaluateStarterAssetsStatus();
+            m_SampleStatus.Clear();
+            foreach (var s in RequiredSamples)
+            {
+                m_SampleStatus[s.id] = EvaluateSampleStatus(s.friendlyPackageName, s.sampleName);
+            }
+            m_StarterAssetsImported = m_SampleStatus.TryGetValue("xri-starter-assets", out bool sa) && sa;
             m_TmpImported = EvaluateTmpStatus();
             m_TeleportLayerConfigured = EvaluateTeleportLayerStatus();
             Repaint();
@@ -277,13 +313,18 @@ namespace StudioXR.Editor
             return -1;
         }
 
-        private bool EvaluateStarterAssetsStatus()
+        public bool EvaluateSampleStatus(string friendlyPackageName, string sampleName)
         {
-            string samplesDir = Path.Combine(Application.dataPath, "Samples", "XR Interaction Toolkit");
+            string samplesDir = Path.Combine(Application.dataPath, "Samples", friendlyPackageName);
             if (!Directory.Exists(samplesDir)) return false;
 
-            var starterDirs = Directory.GetDirectories(samplesDir, "Starter Assets", SearchOption.AllDirectories);
-            return starterDirs.Length > 0;
+            var matchingDirs = Directory.GetDirectories(samplesDir, sampleName, SearchOption.AllDirectories);
+            return matchingDirs.Length > 0;
+        }
+
+        private bool EvaluateStarterAssetsStatus()
+        {
+            return EvaluateSampleStatus("XR Interaction Toolkit", "Starter Assets");
         }
 
         private bool EvaluateTmpStatus()
@@ -332,6 +373,13 @@ namespace StudioXR.Editor
 
             try
             {
+                // 0. Preemptively create Assets/XR to prevent OpenXR validation crashes in AssetImportWorkers
+                string xrDir = Path.Combine(Application.dataPath, "XR");
+                if (!Directory.Exists(xrDir))
+                {
+                    Directory.CreateDirectory(xrDir);
+                }
+
                 // 1. Packages
                 EditorUtility.DisplayProgressBar("stu/dio XR Setup", "Configuring UPM Packages in manifest.json...", 0.3f);
                 int packagesAdded = InstallMissingPackages(false);
@@ -342,18 +390,38 @@ namespace StudioXR.Editor
 
                 // 2. Interaction Layer
                 EditorUtility.DisplayProgressBar("stu/dio XR Setup", "Configuring Teleport Interaction Layer...", 0.6f);
-                if (ConfigureTeleportInteractionLayer())
+                if (ConfigureTeleportInteractionLayer(false))
                     log.AppendLine("Configured 'Teleport' interaction layer (Layer 31) in InteractionLayerSettings.");
                 else
                     log.AppendLine("Teleport interaction layer already configured or initialized.");
 
-                // 3. Starter Assets Sample
-                EditorUtility.DisplayProgressBar("stu/dio XR Setup", "Checking XRI Starter Assets Sample...", 0.8f);
-                if (!m_StarterAssetsImported)
+                // 3. Package Samples (Starter Assets, Hands Interaction Demo, XR Hands Visualizer)
+                EditorUtility.DisplayProgressBar("stu/dio XR Setup", "Checking & importing required package samples...", 0.8f);
+                int importedSamplesCount = 0;
+                try
                 {
-                    if (ImportStarterAssetsSample())
-                        log.AppendLine("Imported XRI Starter Assets sample.");
+                    AssetDatabase.StartAssetEditing();
+                    foreach (var sample in RequiredSamples)
+                    {
+                        if (!EvaluateSampleStatus(sample.friendlyPackageName, sample.sampleName))
+                        {
+                            if (ImportSample(sample, false))
+                            {
+                                importedSamplesCount++;
+                                log.AppendLine($"Imported sample: {sample.friendlyPackageName} -> {sample.sampleName}.");
+                            }
+                        }
+                    }
                 }
+                finally
+                {
+                    AssetDatabase.StopAssetEditing();
+                }
+
+                if (importedSamplesCount > 0)
+                    log.AppendLine($"Imported {importedSamplesCount} required package sample(s).");
+                else
+                    log.AppendLine("All required package samples are already imported.");
 
                 // 4. TMP Resources
                 EditorUtility.DisplayProgressBar("stu/dio XR Setup", "Importing TMP Essential Resources...", 0.9f);
@@ -363,10 +431,9 @@ namespace StudioXR.Editor
                     log.AppendLine("Imported TextMesh Pro Essential Resources.");
                 }
 
-                // 5. Resolve UPM & Refresh
+                // 5. Resolve UPM & Refresh (Single batched import pass)
                 EditorUtility.DisplayProgressBar("stu/dio XR Setup", "Resolving packages and refreshing AssetDatabase...", 0.95f);
                 UnityEditor.PackageManager.Client.Resolve();
-                AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
 
                 SetStatus("One-Click Setup finished successfully! Package manager is resolving dependencies.", MessageType.Info);
@@ -557,7 +624,7 @@ namespace StudioXR.Editor
             }
         }
 
-        public bool ConfigureTeleportInteractionLayer()
+        public bool ConfigureTeleportInteractionLayer(bool triggerRefresh = true)
         {
             try
             {
@@ -567,7 +634,6 @@ namespace StudioXR.Editor
                 if (!Directory.Exists(Path.Combine(Application.dataPath, "XRI", "Settings", "Resources")))
                 {
                     Directory.CreateDirectory(Path.Combine(Application.dataPath, "XRI", "Settings", "Resources"));
-                    AssetDatabase.Refresh();
                 }
 
                 var settings = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath);
@@ -588,7 +654,10 @@ namespace StudioXR.Editor
                         "  - \n  - \n  - \n  - \n  - \n  - \n  - \n  - \n  - \n  - \n  - \n  - \n  - \n  - \n  - \n  - Teleport\n";
 
                     File.WriteAllText(Path.Combine(Application.dataPath, "XRI", "Settings", "Resources", "InteractionLayerSettings.asset"), templateYaml);
-                    AssetDatabase.Refresh();
+                    if (triggerRefresh)
+                    {
+                        AssetDatabase.Refresh();
+                    }
                     return true;
                 }
 
@@ -626,44 +695,125 @@ namespace StudioXR.Editor
             return false;
         }
 
-        public bool ImportStarterAssetsSample()
+        public static string FindPackageDirectory(string packageId)
         {
+            // 1. Check Packages/ (embedded or local package)
+            string localPath = Path.Combine(GetProjectRoot(), "Packages", packageId);
+            if (Directory.Exists(localPath)) return localPath;
+
+            // 2. Check PackageInfo if available via PackageManager API
             try
             {
-                string xriPackagePath = Path.Combine(GetProjectRoot(), "Packages", "com.unity.xr.interaction.toolkit");
-                if (!Directory.Exists(xriPackagePath))
+                var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForPackageName(packageId);
+                if (packageInfo != null && !string.IsNullOrEmpty(packageInfo.resolvedPath) && Directory.Exists(packageInfo.resolvedPath))
                 {
-                    SetStatus("Cannot import Starter Assets: XR Interaction Toolkit package is not yet installed.", MessageType.Warning);
-                    return false;
+                    return packageInfo.resolvedPath;
                 }
+            }
+            catch { }
 
-                string sourceSampleDir = Path.Combine(xriPackagePath, "Samples~", "Starter Assets");
-                if (!Directory.Exists(sourceSampleDir))
+            // 3. Fallback: Search Library/PackageCache/
+            string cacheDir = Path.Combine(GetProjectRoot(), "Library", "PackageCache");
+            if (Directory.Exists(cacheDir))
+            {
+                var dirs = Directory.GetDirectories(cacheDir, packageId + "@*");
+                if (dirs.Length > 0)
                 {
-                    SetStatus("Samples~/Starter Assets not found inside com.unity.xr.interaction.toolkit.", MessageType.Warning);
-                    return false;
+                    return dirs[dirs.Length - 1];
                 }
+            }
 
-                string packageJsonPath = Path.Combine(xriPackagePath, "package.json");
-                string version = "3.5.1";
-                if (File.Exists(packageJsonPath))
+            return null;
+        }
+
+        private static string GetPackageVersion(string packagePath)
+        {
+            if (string.IsNullOrEmpty(packagePath)) return "1.0.0";
+            string packageJsonPath = Path.Combine(packagePath, "package.json");
+            if (File.Exists(packageJsonPath))
+            {
+                try
                 {
                     string pjson = File.ReadAllText(packageJsonPath);
                     var match = Regex.Match(pjson, @"""version""\s*:\s*""([^""]+)""");
-                    if (match.Success) version = match.Groups[1].Value;
+                    if (match.Success) return match.Groups[1].Value;
+                }
+                catch { }
+            }
+            return "1.0.0";
+        }
+
+        public bool ImportSample(SampleRequirement sample, bool triggerRefresh = true)
+        {
+            try
+            {
+                string packagePath = FindPackageDirectory(sample.packageId);
+                if (string.IsNullOrEmpty(packagePath) || !Directory.Exists(packagePath))
+                {
+                    SetStatus($"Cannot import {sample.sampleName}: Package '{sample.packageId}' is not yet installed or resolved.", MessageType.Warning);
+                    return false;
                 }
 
-                string targetSampleDir = Path.Combine(Application.dataPath, "Samples", "XR Interaction Toolkit", version, "Starter Assets");
-                CopyDirectoryRecursive(sourceSampleDir, targetSampleDir);
-                AssetDatabase.Refresh();
-                SetStatus($"Imported XRI Starter Assets sample for v{version}.", MessageType.Info);
+                string sourceDir = Path.Combine(packagePath, "Samples~", sample.sampleName);
+                if (!Directory.Exists(sourceDir))
+                {
+                    sourceDir = Path.Combine(packagePath, "Samples", sample.sampleName);
+                    if (!Directory.Exists(sourceDir))
+                    {
+                        SetStatus($"Sample folder '{sample.sampleName}' not found inside {sample.packageId}.", MessageType.Warning);
+                        return false;
+                    }
+                }
+
+                string version = GetPackageVersion(packagePath);
+                string targetDir = Path.Combine(Application.dataPath, "Samples", sample.friendlyPackageName, version, sample.sampleName);
+
+                CopyDirectoryRecursive(sourceDir, targetDir);
+                if (triggerRefresh)
+                {
+                    AssetDatabase.Refresh();
+                }
+                SetStatus($"Imported '{sample.sampleName}' for {sample.friendlyPackageName} (v{version}).", MessageType.Info);
                 return true;
             }
             catch (Exception ex)
             {
-                SetStatus($"Failed to import Starter Assets sample: {ex.Message}", MessageType.Error);
+                SetStatus($"Failed to import '{sample.sampleName}': {ex.Message}", MessageType.Error);
                 return false;
             }
+        }
+
+        public int ImportAllMissingSamples()
+        {
+            int imported = 0;
+            try
+            {
+                AssetDatabase.StartAssetEditing();
+                foreach (var sample in RequiredSamples)
+                {
+                    if (!EvaluateSampleStatus(sample.friendlyPackageName, sample.sampleName))
+                    {
+                        if (ImportSample(sample, false))
+                            imported++;
+                    }
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+            }
+
+            if (imported > 0)
+            {
+                AssetDatabase.Refresh();
+            }
+            RefreshStatus();
+            return imported;
+        }
+
+        public bool ImportStarterAssetsSample()
+        {
+            return ImportSample(RequiredSamples[0]);
         }
 
         private static void CopyDirectoryRecursive(string sourceDir, string targetDir)
@@ -746,7 +896,7 @@ namespace StudioXR.Editor
             GUILayout.Label("1-Click Package Setup", EditorStyles.boldLabel);
             EditorGUILayout.LabelField(
                 "Ensures this project has all required UPM packages, interaction layers, and " +
-                "XRI Starter Assets dependencies installed for full compatibility.",
+                "sample assets (Starter Assets, Hands Interaction Demo, XR Hands Visualizer) installed for full compatibility.",
                 EditorStyles.wordWrappedLabel
             );
 
@@ -927,44 +1077,96 @@ namespace StudioXR.Editor
         private void DrawSamplesAndResourcesCard()
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            GUILayout.Label("Samples & Resources", EditorStyles.boldLabel);
-            EditorGUILayout.Space(4);
 
-            // Starter Assets
+            int missingSamples = RequiredSamples.Count(s => !m_SampleStatus.TryGetValue(s.id, out bool imp) || !imp);
+
             EditorGUILayout.BeginHorizontal();
-            var prevCol = GUI.color;
-            GUI.color = m_StarterAssetsImported ? new Color(0.2f, 0.8f, 0.2f) : new Color(0.9f, 0.3f, 0.3f);
-            GUILayout.Label(m_StarterAssetsImported ? "\u2714" : "\u2716", EditorStyles.boldLabel, GUILayout.Width(20));
-            GUI.color = prevCol;
-            GUILayout.Label("XRI Starter Assets Sample", GUILayout.Width(220));
-            GUILayout.Label(m_StarterAssetsImported ? "Imported" : "Missing", EditorStyles.miniLabel, GUILayout.Width(80));
+            GUILayout.Label("Samples & Resources", EditorStyles.boldLabel);
             GUILayout.FlexibleSpace();
-            if (!m_StarterAssetsImported)
+            if (missingSamples == 0)
             {
-                if (GUILayout.Button("Import Sample", GUILayout.Width(120)))
+                var prev = GUI.color;
+                GUI.color = new Color(0.2f, 0.7f, 0.2f);
+                GUILayout.Label("All Samples Imported", EditorStyles.miniBoldLabel);
+                GUI.color = prev;
+            }
+            else
+            {
+                var prev = GUI.color;
+                GUI.color = new Color(0.9f, 0.5f, 0.1f);
+                GUILayout.Label($"{missingSamples} Missing", EditorStyles.miniBoldLabel);
+                GUI.color = prev;
+
+                if (GUILayout.Button("Import All Missing Samples", GUILayout.Width(170)))
                 {
-                    ImportStarterAssetsSample();
-                    RefreshStatus();
+                    ImportAllMissingSamples();
                 }
             }
             EditorGUILayout.EndHorizontal();
 
+            EditorGUILayout.Space(4);
+
+            foreach (var sample in RequiredSamples)
+            {
+                bool imported = m_SampleStatus.TryGetValue(sample.id, out bool imp) && imp;
+
+                EditorGUILayout.BeginHorizontal();
+                var prevCol = GUI.color;
+                GUI.color = imported ? new Color(0.2f, 0.8f, 0.2f) : new Color(0.9f, 0.3f, 0.3f);
+                GUILayout.Label(imported ? "\u2714" : "\u2716", EditorStyles.boldLabel, GUILayout.Width(20));
+                GUI.color = prevCol;
+
+                EditorGUILayout.BeginVertical();
+                GUILayout.Label($"{sample.friendlyPackageName} - {sample.sampleName}", EditorStyles.boldLabel);
+                GUILayout.Label(sample.description, EditorStyles.wordWrappedMiniLabel);
+                EditorGUILayout.EndVertical();
+
+                GUILayout.Label(imported ? "Imported" : "Missing", EditorStyles.miniLabel, GUILayout.Width(60));
+
+                if (!imported)
+                {
+                    if (GUILayout.Button("Import", GUILayout.Width(80)))
+                    {
+                        ImportSample(sample);
+                        RefreshStatus();
+                    }
+                }
+                else
+                {
+                    GUILayout.Space(84);
+                }
+
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.Space(2);
+            }
+
+            EditorGUILayout.Space(4);
+
             // TMP
             EditorGUILayout.BeginHorizontal();
-            prevCol = GUI.color;
+            var prevColTmp = GUI.color;
             GUI.color = m_TmpImported ? new Color(0.2f, 0.8f, 0.2f) : new Color(0.9f, 0.3f, 0.3f);
             GUILayout.Label(m_TmpImported ? "\u2714" : "\u2716", EditorStyles.boldLabel, GUILayout.Width(20));
-            GUI.color = prevCol;
-            GUILayout.Label("TextMesh Pro Essential Resources", GUILayout.Width(220));
-            GUILayout.Label(m_TmpImported ? "Imported" : "Missing", EditorStyles.miniLabel, GUILayout.Width(80));
-            GUILayout.FlexibleSpace();
+            GUI.color = prevColTmp;
+
+            EditorGUILayout.BeginVertical();
+            GUILayout.Label("TextMesh Pro Essential Resources", EditorStyles.boldLabel);
+            GUILayout.Label("Default fonts, materials, and TMP settings required for world-space UI.", EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.EndVertical();
+
+            GUILayout.Label(m_TmpImported ? "Imported" : "Missing", EditorStyles.miniLabel, GUILayout.Width(60));
+
             if (!m_TmpImported)
             {
-                if (GUILayout.Button("Import TMP", GUILayout.Width(120)))
+                if (GUILayout.Button("Import", GUILayout.Width(80)))
                 {
                     ImportTmpEssentialResources();
                     RefreshStatus();
                 }
+            }
+            else
+            {
+                GUILayout.Space(84);
             }
             EditorGUILayout.EndHorizontal();
 

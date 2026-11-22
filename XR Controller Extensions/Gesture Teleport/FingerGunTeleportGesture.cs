@@ -1,3 +1,4 @@
+#if STUDIO_XR_HANDS_PRESENT
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -251,3 +252,17 @@ namespace StudioXR.Interaction
         }
     }
 }
+#else
+using UnityEngine;
+
+namespace StudioXR.Interaction
+{
+    public class FingerGunTeleportGesture : MonoBehaviour
+    {
+        private void Awake()
+        {
+            Debug.LogWarning("[FingerGunTeleportGesture] XR Hands package (com.unity.xr.hands) is required for hand-tracking gestures.");
+        }
+    }
+}
+#endif

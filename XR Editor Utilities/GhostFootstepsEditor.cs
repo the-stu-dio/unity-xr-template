@@ -1,4 +1,5 @@
 #pragma warning disable CS0618
+#if STUDIO_XR_SPLINES_PRESENT
 using UnityEditor;
 using UnityEngine;
 
@@ -352,3 +353,4 @@ public class GhostFootstepsEditor : Editor
         EditorGUILayout.Space(4);
     }
 }
+#endif

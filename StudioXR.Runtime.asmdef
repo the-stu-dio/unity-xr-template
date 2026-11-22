@@ -1,0 +1,42 @@
+{
+    "name": "StudioXR.Runtime",
+    "rootNamespace": "StudioXR",
+    "references": [
+        "Unity.XR.Interaction.Toolkit",
+        "Unity.XR.Hands",
+        "Unity.Splines",
+        "Unity.InputSystem",
+        "Unity.XR.CoreUtils",
+        "Unity.Mathematics",
+        "Unity.TextMeshPro",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "STUDIO_XR_XRI_PRESENT"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.xr.interaction.toolkit",
+            "expression": "3.0.0",
+            "define": "STUDIO_XR_XRI_PRESENT"
+        },
+        {
+            "name": "com.unity.xr.hands",
+            "expression": "1.4.0",
+            "define": "STUDIO_XR_HANDS_PRESENT"
+        },
+        {
+            "name": "com.unity.splines",
+            "expression": "2.6.0",
+            "define": "STUDIO_XR_SPLINES_PRESENT"
+        }
+    ],
+    "noEngineReferences": false
+}

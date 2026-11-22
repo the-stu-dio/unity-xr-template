@@ -1,5 +1,6 @@
 #pragma warning disable CS0618 // Reactive mode uses the deprecated XRI AffordanceSystem — intentional.
 
+#if STUDIO_XR_SPLINES_PRESENT
 using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
@@ -981,3 +982,14 @@ public class GhostFootsteps : MonoBehaviour
         return -1;
     }
 }
+#else
+using UnityEngine;
+
+public class GhostFootsteps : MonoBehaviour
+{
+    private void Awake()
+    {
+        Debug.LogWarning("[GhostFootsteps] Unity Splines package (com.unity.splines) is required to use GhostFootsteps.");
+    }
+}
+#endif
