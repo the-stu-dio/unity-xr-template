@@ -171,14 +171,18 @@ namespace StudioXR.Editor
             if (EditorApplication.isPlayingOrWillChangePlaymode) return;
             if (!EditorPrefs.GetBool(PrefKeyAutoCheck, true)) return;
 
+            // Ensure template settings are deployed if OpenXR is in manifest but settings are missing on disk
+            var manifestDeps = ReadManifestDependencies();
+            if (manifestDeps.ContainsKey("com.unity.xr.openxr"))
+            {
+                DeployTemplateSettings(false);
+            }
+
             string projectHash = Application.dataPath.GetHashCode().ToString();
             if (EditorPrefs.GetBool(PrefKeyDismissPrompt + projectHash, false)) return;
 
-            var installer = CreateInstance<StudioXRCompatibilityInstaller>();
-            installer.RefreshStatus();
-
-            bool hasMissingPackages = RequiredPackages.Any(p => p.isCritical && !installer.IsPackageInstalled(p.id));
-            bool hasMissingSamples = RequiredSamples.Any(s => !installer.EvaluateSampleStatus(s.friendlyPackageName, s.sampleName));
+            bool hasMissingPackages = RequiredPackages.Any(p => p.isCritical && !manifestDeps.ContainsKey(p.id));
+            bool hasMissingSamples = RequiredSamples.Any(s => !EvaluateSampleStatus(s.friendlyPackageName, s.sampleName));
 
             if (hasMissingPackages || hasMissingSamples)
             {
@@ -203,12 +207,11 @@ namespace StudioXR.Editor
                     EditorPrefs.SetBool(PrefKeyDismissPrompt + projectHash, true);
                 }
             }
-
-            DestroyImmediate(installer);
         }
 
         private void OnEnable()
         {
+            titleContent = new GUIContent("stu/dio XR Setup");
             RefreshStatus();
         }
 
@@ -313,7 +316,67 @@ namespace StudioXR.Editor
             return -1;
         }
 
-        public bool EvaluateSampleStatus(string friendlyPackageName, string sampleName)
+        public static string FindTemplateSettingsDirectory()
+        {
+            string relativePath = Path.Combine("XR Assets", "Template Settings");
+            string fullPath = Path.Combine(Application.dataPath, "stu-dio XR Template", relativePath);
+            if (Directory.Exists(fullPath)) return fullPath;
+
+            var matches = Directory.GetDirectories(Application.dataPath, "Template Settings", SearchOption.AllDirectories);
+            if (matches.Length > 0) return matches[0];
+
+            return null;
+        }
+
+        public static bool DeployTemplateSettings(bool overwriteExisting = false)
+        {
+            string templateSettingsDir = FindTemplateSettingsDirectory();
+            if (string.IsNullOrEmpty(templateSettingsDir) || !Directory.Exists(templateSettingsDir))
+                return false;
+
+            bool deployedAny = false;
+
+            // 1. Deploy XR settings (OpenXR package settings, loaders, simulation)
+            string sourceXr = Path.Combine(templateSettingsDir, "XR");
+            string targetXr = Path.Combine(Application.dataPath, "XR");
+            string targetOpenXrSettings = Path.Combine(targetXr, "Settings", "OpenXR Package Settings.asset");
+
+            if (Directory.Exists(sourceXr) && (overwriteExisting || !File.Exists(targetOpenXrSettings)))
+            {
+                CopyDirectoryRecursive(sourceXr, targetXr);
+                deployedAny = true;
+            }
+
+            // 2. Deploy XRI settings (InteractionLayerSettings with Teleport layer 31)
+            string sourceXri = Path.Combine(templateSettingsDir, "XRI");
+            string targetXri = Path.Combine(Application.dataPath, "XRI");
+            string targetLayerSettings = Path.Combine(targetXri, "Settings", "Resources", "InteractionLayerSettings.asset");
+
+            if (Directory.Exists(sourceXri) && (overwriteExisting || !File.Exists(targetLayerSettings)))
+            {
+                CopyDirectoryRecursive(sourceXri, targetXri);
+                deployedAny = true;
+            }
+
+            // 3. Clean up any collision folders created by worker races (e.g. "Assets/XR/Settings 1", "Settings 2")
+            if (Directory.Exists(targetXr))
+            {
+                var collisionDirs = Directory.GetDirectories(targetXr, "Settings *");
+                foreach (var dir in collisionDirs)
+                {
+                    try { Directory.Delete(dir, true); } catch { }
+                    string metaFile = dir + ".meta";
+                    if (File.Exists(metaFile))
+                    {
+                        try { File.Delete(metaFile); } catch { }
+                    }
+                }
+            }
+
+            return deployedAny;
+        }
+
+        public static bool EvaluateSampleStatus(string friendlyPackageName, string sampleName)
         {
             string samplesDir = Path.Combine(Application.dataPath, "Samples", friendlyPackageName);
             if (!Directory.Exists(samplesDir)) return false;
@@ -322,19 +385,19 @@ namespace StudioXR.Editor
             return matchingDirs.Length > 0;
         }
 
-        private bool EvaluateStarterAssetsStatus()
+        private static bool EvaluateStarterAssetsStatus()
         {
             return EvaluateSampleStatus("XR Interaction Toolkit", "Starter Assets");
         }
 
-        private bool EvaluateTmpStatus()
+        private static bool EvaluateTmpStatus()
         {
             string tmpDir = Path.Combine(Application.dataPath, "TextMesh Pro");
             if (Directory.Exists(tmpDir)) return true;
             return Resources.Load("TMP Settings") != null;
         }
 
-        private bool EvaluateTeleportLayerStatus()
+        private static bool EvaluateTeleportLayerStatus()
         {
             string assetPath = "Assets/XRI/Settings/Resources/InteractionLayerSettings.asset";
             var settings = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath);
@@ -373,11 +436,10 @@ namespace StudioXR.Editor
 
             try
             {
-                // 0. Preemptively create Assets/XR to prevent OpenXR validation crashes in AssetImportWorkers
-                string xrDir = Path.Combine(Application.dataPath, "XR");
-                if (!Directory.Exists(xrDir))
+                // 0. Preemptively deploy template settings (XR & XRI) to prevent OpenXR worker crashes
+                if (DeployTemplateSettings(false))
                 {
-                    Directory.CreateDirectory(xrDir);
+                    log.AppendLine("Deployed pre-configured OpenXR and XRI template settings.");
                 }
 
                 // 1. Packages
@@ -522,6 +584,9 @@ namespace StudioXR.Editor
 
         public int InstallMissingPackages(bool triggerResolve = true)
         {
+            // Preemptively deploy template settings before modifying manifest to prevent worker crashes
+            DeployTemplateSettings(false);
+
             var existingDeps = ReadManifestDependencies();
             var toAdd = new List<PackageRequirement>();
 
