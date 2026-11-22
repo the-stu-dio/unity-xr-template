@@ -11,8 +11,10 @@ public class GhostFootstepsEditor : Editor
     // Visuals & Core Sampling
     private SerializedProperty m_StepCountProp;
     private SerializedProperty m_StepWidthProp;
+    private SerializedProperty m_FloorOffsetProp;
     private SerializedProperty m_StepScaleProp;
     private SerializedProperty m_FootstepMeshProp;
+    private SerializedProperty m_FootstepMaterialProp;
 
     // Animation
     private SerializedProperty m_AnimateProp;
@@ -58,8 +60,10 @@ public class GhostFootstepsEditor : Editor
 
         m_StepCountProp = serializedObject.FindProperty("m_StepCount");
         m_StepWidthProp = serializedObject.FindProperty("m_StepWidth");
+        m_FloorOffsetProp = serializedObject.FindProperty("m_FloorOffset");
         m_StepScaleProp = serializedObject.FindProperty("m_StepScale");
         m_FootstepMeshProp = serializedObject.FindProperty("m_FootstepMesh");
+        m_FootstepMaterialProp = serializedObject.FindProperty("m_FootstepMaterial");
 
         m_AnimateProp = serializedObject.FindProperty("m_Animate");
         m_LoopDurationProp = serializedObject.FindProperty("m_LoopDuration");
@@ -283,8 +287,10 @@ public class GhostFootstepsEditor : Editor
         EditorGUILayout.LabelField("Footstep Appearance", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(m_StepCountProp, new GUIContent("Step Count"));
         EditorGUILayout.PropertyField(m_StepWidthProp, new GUIContent("Step Width (m)"));
+        EditorGUILayout.PropertyField(m_FloorOffsetProp, new GUIContent("Floor Offset (m)"));
         EditorGUILayout.PropertyField(m_StepScaleProp, new GUIContent("Step Scale"));
         EditorGUILayout.PropertyField(m_FootstepMeshProp, new GUIContent("Custom Mesh (Optional)"));
+        EditorGUILayout.PropertyField(m_FootstepMaterialProp, new GUIContent("Custom Material (Optional)"));
         EditorGUILayout.Space(4);
 
         EditorGUILayout.LabelField("Animation", EditorStyles.boldLabel);

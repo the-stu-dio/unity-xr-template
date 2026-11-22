@@ -78,14 +78,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 43554d335fd8ea24e868c194d2ae4639, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  material: {fileID: 2100000, guid: 61d033f3a51f40647a5458ea14f3b4af, type: 2}
-  player: {fileID: 0}
+  meshRenderer: {fileID: 1801240328544028736}
+  material: {fileID: 2100000, guid: 03e197523e400844989d915d235786ed, type: 2}
+  headTransform: {fileID: 0}
+  interactable: {fileID: 0}
+  affordanceProvider: {fileID: 0}
+  fadeDuration: 0.25
+  releaseCooldown: 0.5
   mainColorPropertyName: Main Color
   edgeColorPropertyName: Edge Color
+  showWhenFocused: 1
+  showWhenGazed: 1
+  showWhenInProximity: 1
+  gazeFacingThreshold: 0.75
   proximityThreshold: 1
-  usePlayerProximity: 1
-  proximity: 0
-  meshRenderer: {fileID: 1801240328544028736}
 --- !u!1 &840985797831929679
 GameObject:
   m_ObjectHideFlags: 0
@@ -589,7 +595,7 @@ SkinnedMeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 455ef821a5429de4baeed61fa958acbc, type: 2}
-  - {fileID: 2100000, guid: 61d033f3a51f40647a5458ea14f3b4af, type: 2}
+  - {fileID: 2100000, guid: 03e197523e400844989d915d235786ed, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

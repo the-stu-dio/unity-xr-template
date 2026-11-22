@@ -1,36 +1,160 @@
 #pragma warning disable CS0618 // AffordanceSystem is deprecated in XRI 3.x — intentional fallback support.
 
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
+using Unity.XR.CoreUtils;
 using Unity.XR.CoreUtils.Bindings;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
 using UnityEngine.XR.Interaction.Toolkit.AffordanceSystem.State;
 
+/// <summary>
+/// Controls hand indicator affordance visibility with smooth fading, gaze, proximity, focus, and handedness-aware grab conditions.
+/// Supports both Off-by-default (shows under conditions) and On-by-default (hides under conditions).
+/// </summary>
 public class HandIndicator : MonoBehaviour
 {
+    public enum HandSelectionMode
+    {
+        [InspectorName("None")]
+        None = 0,
+
+        [InspectorName("Left Hand")]
+        LeftHand = 1,
+
+        [InspectorName("Right Hand")]
+        RightHand = 2,
+
+        [InspectorName("Either Hand (L/R)")]
+        EitherHand = 3,
+
+        [InspectorName("Any Selection")]
+        AnySelection = 4
+    }
+
+    // -------------------------------------------------------------------------
+    // Serialized Fields
+
+    [Header("Visibility")]
+    [SerializeField, Tooltip("When false (default), the indicator is off by default and SHOWS when conditions are met.\nWhen true, the indicator is on by default and HIDES when conditions are met.")]
+    private bool showByDefault = false;
+
+    [Header("Conditions")]
+    [FormerlySerializedAs("showWhenFocused")]
+    [SerializeField, Tooltip("Condition active when the interactable is focused or hovered by an interactor.")]
+    private bool whenFocused = true;
+
+    [FormerlySerializedAs("showWhenGazed")]
+    [SerializeField, Tooltip("Condition active when the player is gazing at the interactable.")]
+    private bool whenGazed = true;
+
+    [FormerlySerializedAs("showWhenInProximity")]
+    [SerializeField, Tooltip("Condition active when the player is within the proximity threshold.")]
+    private bool whenInProximity = true;
+
+    [FormerlySerializedAs("showWhenSelectedWithLRHand")]
+    [SerializeField, Tooltip("Condition active when the interactable is selected by the specified hand.")]
+    private HandSelectionMode whenSelected = HandSelectionMode.None;
+
+    [Header("Hand Settings")]
+    [SerializeField, Tooltip("The hand this indicator represents (Left or Right). If None, auto-detects from GameObject or mesh name.")]
+    private InteractorHandedness indicatorHand = InteractorHandedness.None;
+
+    [SerializeField, Tooltip("Hide indicator if this indicator's own hand is gripping the interactable (prevents ghost hand from clipping through real hand).")]
+    private bool hideIfOwnHandGrabbing = true;
+
+    [Header("Thresholds")]
+    [SerializeField, Range(0.5f, 0.99f), Tooltip("Dot product threshold for gaze detection (0.75 ≈ 41° cone).")]
+    private float gazeFacingThreshold = 0.75f;
+
+    [SerializeField, Range(0f, 10f), Tooltip("Distance threshold in meters for proximity detection.")]
+    private float proximityThreshold  = 1.5f;
+
+    [Header("Timing")]
+    [SerializeField, Range(0.05f, 2f), Tooltip("Fade transition duration in seconds.")]
+    private float fadeDuration    = 0.25f;
+
+    [SerializeField, Range(0f, 2f), Tooltip("Delay before re-showing after grab release (prevents hover from immediately re-triggering indicator).")]
+    private float releaseCooldown = 0.5f;
+
     [Header("References")]
     [SerializeField] private SkinnedMeshRenderer meshRenderer;
     [SerializeField] private Material material;               // Matched by name to the renderer's runtime instance
-    [SerializeField] private Transform headTransform;         // Camera/head transform — falls back to Camera.main
+    [SerializeField, Tooltip("Camera/head transform — falls back to Camera.main or the XR Rig (XROrigin).")]
+    private Transform headTransform;
     [SerializeField] private XRBaseInteractable interactable;
     [SerializeField] private XRInteractableAffordanceStateProvider affordanceProvider;
 
-    [Header("Settings")]
-    [SerializeField, Range(0.05f, 2f)] private float fadeDuration    = 0.25f;
-    [SerializeField, Range(0f, 2f)]    private float releaseCooldown = 0.5f;   // Delay before re-showing after grab release
+    [Header("Material Shader Properties")]
     [SerializeField] private string mainColorPropertyName = "_Color";
     [SerializeField] private string edgeColorPropertyName = "_EdgeColor";
 
-    [Header("Conditional Fade")]
-    [SerializeField] private bool showWhenFocused     = true; // Appear when the interactable is focused or targeted by an interactor
-    [SerializeField] private bool showWhenGazed       = true; // Appear when the player's view is directed at the object
-    [SerializeField] private bool showWhenInProximity = true; // Fade in gradually as the player approaches
-    [Space(6)]
-    [SerializeField, Range(0.5f, 0.99f)] private float gazeFacingThreshold = 0.75f; // Dot product threshold — 0.75 ≈ 41° cone
-    [SerializeField, Range(0f, 10f)]     private float proximityThreshold  = 1.5f;
+    // -------------------------------------------------------------------------
+    // Public Properties
 
-    // --- Private state ---
+    public bool ShowByDefault
+    {
+        get => showByDefault;
+        set => showByDefault = value;
+    }
+
+    public bool WhenFocused
+    {
+        get => whenFocused;
+        set => whenFocused = value;
+    }
+
+    public bool WhenGazed
+    {
+        get => whenGazed;
+        set => whenGazed = value;
+    }
+
+    public bool WhenInProximity
+    {
+        get => whenInProximity;
+        set => whenInProximity = value;
+    }
+
+    public HandSelectionMode WhenSelected
+    {
+        get => whenSelected;
+        set => whenSelected = value;
+    }
+
+    // Backward-compatible properties
+    public bool ShowWhenFocused { get => whenFocused; set => whenFocused = value; }
+    public bool ShowWhenGazed { get => whenGazed; set => whenGazed = value; }
+    public bool ShowWhenInProximity { get => whenInProximity; set => whenInProximity = value; }
+    public HandSelectionMode ShowWhenSelectedWithLRHand { get => whenSelected; set => whenSelected = value; }
+    public HandSelectionMode ShowWhenSelectedWithHand { get => whenSelected; set => whenSelected = value; }
+
+    public InteractorHandedness IndicatorHand
+    {
+        get => indicatorHand;
+        set => indicatorHand = value;
+    }
+
+    public Transform HeadTransform
+    {
+        get => headTransform;
+        set => headTransform = value;
+    }
+
+    public bool HideIfOwnHandGrabbing
+    {
+        get => hideIfOwnHandGrabbing;
+        set => hideIfOwnHandGrabbing = value;
+    }
+
+    public float CurrentAlpha => m_Alpha;
+
+    // -------------------------------------------------------------------------
+    // Private State
+
     private readonly BindingsGroup m_Bindings = new BindingsGroup();
     private Material m_Mat;
     private int m_MainColorId = -1;
@@ -39,21 +163,18 @@ public class HandIndicator : MonoBehaviour
     private Coroutine m_Fade;
     private float m_LastReleaseTime = float.MinValue;
     private float m_Alpha;
-    private bool m_HighPriorityActive;
-    private bool m_WasGrabbed;
+    private float m_TargetAlpha;
 
-    private bool IsGrabbed => (interactable != null && interactable.isSelected)
-                           || (affordanceProvider != null && (m_AffordanceState == AffordanceStateShortcuts.selected
-                                                           || m_AffordanceState == AffordanceStateShortcuts.activated));
-
-    private bool IsInteractableFocused => (interactable != null && (interactable.isFocused || interactable.isHovered))
-                                       || (affordanceProvider != null && (m_AffordanceState == AffordanceStateShortcuts.focused
-                                                                       || m_AffordanceState == AffordanceStateShortcuts.hovered
-                                                                       || m_AffordanceState == AffordanceStateShortcuts.hoveredPriority));
+    private bool IsInteractableFocused =>
+        (interactable != null && (interactable.isFocused || interactable.isHovered))
+        || (affordanceProvider != null && (m_AffordanceState == AffordanceStateShortcuts.focused
+                                        || m_AffordanceState == AffordanceStateShortcuts.hovered
+                                        || m_AffordanceState == AffordanceStateShortcuts.hoveredPriority));
 
     private bool InCooldown => Time.time - m_LastReleaseTime < releaseCooldown;
 
     // -------------------------------------------------------------------------
+    // Lifecycle
 
     private void Awake()
     {
@@ -66,15 +187,13 @@ public class HandIndicator : MonoBehaviour
         }
 
         SetupMaterial();
-
-        headTransform ??= Camera.main?.transform;
-
+        ResolveHeadTransform();
         ResolveInteractable();
     }
 
     private void Start()
     {
-        headTransform ??= Camera.main?.transform;
+        ResolveHeadTransform();
         EvaluateState(instant: true);
     }
 
@@ -111,110 +230,304 @@ public class HandIndicator : MonoBehaviour
         }
 
         StopFade();
-        m_HighPriorityActive = false;
-        m_WasGrabbed = false;
     }
 
     private void Update()
     {
-        headTransform ??= Camera.main?.transform;
+        ResolveHeadTransform();
 
         if (interactable == null)
             ResolveInteractable();
 
-        bool grabbed = IsGrabbed;
-        if (grabbed)
-        {
-            m_WasGrabbed = true;
-            m_HighPriorityActive = false;
-            if (m_Alpha > 0f) { StopFade(); SetProximity(0f); }
-            return;
-        }
-
-        if (m_WasGrabbed)
-        {
-            m_WasGrabbed = false;
-            m_LastReleaseTime = Time.time;
-            m_HighPriorityActive = false;
-            if (m_Alpha > 0f) { StopFade(); SetProximity(0f); }
-            return;
-        }
-
-        if (InCooldown)
-        {
-            m_HighPriorityActive = false;
-            if (m_Alpha > 0f) { StopFade(); SetProximity(0f); }
-            return;
-        }
-
         EvaluateState(instant: false);
     }
 
-    private void EvaluateState(bool instant)
-    {
-        bool focusMet = showWhenFocused && IsInteractableFocused;
-
-        bool gazeMet = false;
-        if (showWhenGazed && headTransform != null)
-        {
-            Vector3 center   = meshRenderer != null ? meshRenderer.bounds.center : transform.position;
-            Vector3 toTarget = center - headTransform.position;
-            float   dist     = toTarget.magnitude;
-            gazeMet = dist > 0.01f && Vector3.Dot(headTransform.forward, toTarget / dist) >= gazeFacingThreshold;
-        }
-
-        float proximityAlpha = 0f;
-        if (showWhenInProximity && headTransform != null && proximityThreshold > 0f)
-        {
-            Vector3 center = meshRenderer != null ? meshRenderer.bounds.center : transform.position;
-            float   dist   = Vector3.Distance(headTransform.position, center);
-            proximityAlpha = Mathf.Clamp01(1f - dist / proximityThreshold);
-        }
-
-        bool highPriorityNow = focusMet || gazeMet;
-
-        if (instant)
-        {
-            m_HighPriorityActive = highPriorityNow;
-            StopFade();
-            float target = m_HighPriorityActive ? 1f : (showWhenInProximity ? proximityAlpha : 0f);
-            SetProximity(target);
-            return;
-        }
-
-        if (highPriorityNow != m_HighPriorityActive)
-        {
-            m_HighPriorityActive = highPriorityNow;
-            float target = m_HighPriorityActive ? 1f : (showWhenInProximity ? proximityAlpha : 0f);
-            StartFade(target);
-        }
-        else if (!m_HighPriorityActive && m_Fade == null)
-        {
-            SetProximity(showWhenInProximity ? proximityAlpha : 0f);
-        }
-    }
+    // -------------------------------------------------------------------------
+    // State Evaluation
 
     private void OnSelectEntered(SelectEnterEventArgs args)
     {
-        m_WasGrabbed = true;
-        m_HighPriorityActive = false;
-        StopFade();
-        SetProximity(0f);
+        EvaluateState(instant: false);
     }
 
     private void OnSelectExited(SelectExitEventArgs args)
     {
-        m_WasGrabbed = false;
         m_LastReleaseTime = Time.time;
-        m_HighPriorityActive = false;
-        StopFade();
-        SetProximity(0f);
+        EvaluateState(instant: false);
     }
 
     private void OnAffordanceStateChanged(AffordanceStateData data)
     {
         m_AffordanceState = data.stateIndex;
+        EvaluateState(instant: false);
     }
+
+    public void EvaluateState(bool instant)
+    {
+        float target = CalculateTargetAlpha();
+
+        if (instant || fadeDuration <= 0.001f)
+        {
+            StopFade();
+            m_TargetAlpha = target;
+            SetAlpha(target);
+            return;
+        }
+
+        // Discrete target changed -> initiate smooth fade
+        if (Mathf.Abs(target - m_TargetAlpha) > 0.01f)
+        {
+            StartFade(target);
+        }
+        else if (m_Fade == null && whenInProximity)
+        {
+            // When proximity distance changes continuously and no discrete fade is active
+            SetAlpha(target);
+        }
+    }
+
+    public float CalculateTargetAlpha()
+    {
+        CheckSelectionState(out bool isLeftSelecting, out bool isRightSelecting, out bool isAnySelecting);
+
+        bool isOwnHandGrabbing = false;
+        if (hideIfOwnHandGrabbing)
+        {
+            var ownHand = ResolveOwnHandedness();
+            if (ownHand == InteractorHandedness.Left && isLeftSelecting)
+                isOwnHandGrabbing = true;
+            else if (ownHand == InteractorHandedness.Right && isRightSelecting)
+                isOwnHandGrabbing = true;
+        }
+
+        bool selectionConditionMet = false;
+        switch (whenSelected)
+        {
+            case HandSelectionMode.LeftHand:
+                selectionConditionMet = isLeftSelecting;
+                break;
+            case HandSelectionMode.RightHand:
+                selectionConditionMet = isRightSelecting;
+                break;
+            case HandSelectionMode.EitherHand:
+                selectionConditionMet = isLeftSelecting || isRightSelecting;
+                break;
+            case HandSelectionMode.AnySelection:
+                selectionConditionMet = isAnySelecting;
+                break;
+            case HandSelectionMode.None:
+            default:
+                selectionConditionMet = false;
+                break;
+        }
+
+        bool inCooldown = InCooldown;
+        bool focusConditionMet = whenFocused && IsInteractableFocused && !inCooldown;
+        bool gazeConditionMet = whenGazed && IsGazing();
+        float proximityFactor = whenInProximity ? ComputeProximityFactor() : 0f;
+
+        if (!showByDefault)
+        {
+            // === OFF BY DEFAULT (SHOW WHEN CONDITIONS ARE MET) ===
+
+            // 1. If own hand is gripping this affordance, suppress
+            if (isOwnHandGrabbing)
+                return 0f;
+
+            // 2. If object is grabbed
+            if (isAnySelecting)
+            {
+                // Shows only if a matching hand selection condition is met
+                if (whenSelected != HandSelectionMode.None && selectionConditionMet)
+                    return 1f;
+
+                // Grabbed by non-matching hand or selection is None -> hidden
+                return 0f;
+            }
+
+            // 3. During release cooldown, suppress hover/focus re-trigger
+            if (inCooldown)
+                return 0f;
+
+            // 4. Discrete trigger conditions (Focus / Gaze)
+            if (focusConditionMet || gazeConditionMet)
+                return 1f;
+
+            // 5. Proximity gradient
+            if (whenInProximity && proximityFactor > 0f)
+                return proximityFactor;
+
+            // 6. Default off
+            return 0f;
+        }
+        else
+        {
+            // === ON BY DEFAULT (HIDE WHEN CONDITIONS ARE MET) ===
+
+            // 1. If own hand is gripping this affordance, hide
+            if (isOwnHandGrabbing)
+                return 0f;
+
+            // 2. If object is grabbed
+            if (isAnySelecting)
+            {
+                if (whenSelected != HandSelectionMode.None)
+                {
+                    if (selectionConditionMet)
+                        return 0f;
+                }
+                else
+                {
+                    // By default when selection is None, any grab hides the affordance
+                    return 0f;
+                }
+            }
+
+            // 3. Discrete conditions that hide the indicator
+            if (focusConditionMet || gazeConditionMet)
+                return 0f;
+
+            // 4. Proximity gradient: fades out as player approaches
+            if (whenInProximity && proximityFactor > 0f)
+                return 1f - proximityFactor;
+
+            // 5. Default on
+            return 1f;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper Checks
+
+    public bool IsSelectedWithMatchingHand()
+    {
+        CheckSelectionState(out bool isLeft, out bool isRight, out bool isAny);
+
+        if (hideIfOwnHandGrabbing)
+        {
+            var own = ResolveOwnHandedness();
+            if (own == InteractorHandedness.Left && isLeft) return false;
+            if (own == InteractorHandedness.Right && isRight) return false;
+        }
+
+        switch (whenSelected)
+        {
+            case HandSelectionMode.LeftHand: return isLeft;
+            case HandSelectionMode.RightHand: return isRight;
+            case HandSelectionMode.EitherHand: return isLeft || isRight;
+            case HandSelectionMode.AnySelection: return isAny;
+            default: return false;
+        }
+    }
+
+    private void CheckSelectionState(out bool isLeftSelecting, out bool isRightSelecting, out bool isAnySelecting)
+    {
+        isLeftSelecting = false;
+        isRightSelecting = false;
+        isAnySelecting = false;
+
+        if (interactable != null && interactable.isSelected)
+        {
+            isAnySelecting = true;
+            var selectingList = interactable.interactorsSelecting;
+            for (int i = 0; i < selectingList.Count; i++)
+            {
+                var h = ResolveHandedness(selectingList[i]);
+                if (h == InteractorHandedness.Left)
+                    isLeftSelecting = true;
+                else if (h == InteractorHandedness.Right)
+                    isRightSelecting = true;
+            }
+        }
+        else if (affordanceProvider != null && (m_AffordanceState == AffordanceStateShortcuts.selected || m_AffordanceState == AffordanceStateShortcuts.activated))
+        {
+            isAnySelecting = true;
+        }
+    }
+
+    private bool IsGazing()
+    {
+        if (headTransform == null)
+            ResolveHeadTransform();
+
+        if (headTransform == null)
+            return false;
+
+        Vector3 center = meshRenderer != null ? meshRenderer.bounds.center : transform.position;
+        Vector3 toTarget = center - headTransform.position;
+        float dist = toTarget.magnitude;
+        if (dist <= 0.01f)
+            return false;
+
+        return Vector3.Dot(headTransform.forward, toTarget / dist) >= gazeFacingThreshold;
+    }
+
+    private float ComputeProximityFactor()
+    {
+        if (proximityThreshold <= 0f)
+            return 0f;
+
+        if (headTransform == null)
+            ResolveHeadTransform();
+
+        if (headTransform == null)
+            return 0f;
+
+        Vector3 center = meshRenderer != null ? meshRenderer.bounds.center : transform.position;
+        float dist = Vector3.Distance(headTransform.position, center);
+        return Mathf.Clamp01(1f - dist / proximityThreshold);
+    }
+
+    public InteractorHandedness ResolveOwnHandedness()
+    {
+        if (indicatorHand != InteractorHandedness.None)
+            return indicatorHand;
+
+        string objName = gameObject.name;
+        if (objName.IndexOf("Left", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            return InteractorHandedness.Left;
+        if (objName.IndexOf("Right", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            return InteractorHandedness.Right;
+
+        if (meshRenderer != null)
+        {
+            string meshName = meshRenderer.name;
+            if (meshName.IndexOf("_L_", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                meshName.IndexOf("Left", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return InteractorHandedness.Left;
+
+            if (meshName.IndexOf("_R_", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                meshName.IndexOf("Right", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return InteractorHandedness.Right;
+        }
+
+        return InteractorHandedness.None;
+    }
+
+    public static InteractorHandedness ResolveHandedness(IXRInteractor interactor)
+    {
+        if (interactor == null)
+            return InteractorHandedness.None;
+
+        if (interactor.handedness != InteractorHandedness.None)
+            return interactor.handedness;
+
+        Transform t = interactor.transform;
+        while (t != null)
+        {
+            string name = t.name;
+            if (name.IndexOf("Left", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return InteractorHandedness.Left;
+            if (name.IndexOf("Right", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return InteractorHandedness.Right;
+            t = t.parent;
+        }
+
+        return InteractorHandedness.None;
+    }
+
+    // -------------------------------------------------------------------------
+    // Resolvers
 
     private void ResolveInteractable()
     {
@@ -232,55 +545,134 @@ public class HandIndicator : MonoBehaviour
             ?? (transform.parent != null ? transform.parent.GetComponentInChildren<XRInteractableAffordanceStateProvider>() : null);
     }
 
-    // -------------------------------------------------------------------------
-    // Fade
+    private void ResolveHeadTransform()
+    {
+        if (headTransform != null)
+            return;
 
-    /// <summary> Fade indicator to full visibility. Safe to call from UnityEvent or Invoke. </summary>
+        // 1. Primary: Camera.main
+        if (Camera.main != null)
+        {
+            headTransform = Camera.main.transform;
+            return;
+        }
+
+        // 2. Fallback: Find XR Rig in scene via XROrigin
+        var xrOrigin = Object.FindAnyObjectByType<XROrigin>();
+        if (xrOrigin != null)
+        {
+            if (xrOrigin.Camera != null)
+            {
+                headTransform = xrOrigin.Camera.transform;
+                return;
+            }
+
+            if (xrOrigin.CameraFloorOffsetObject != null)
+            {
+                var offsetCam = xrOrigin.CameraFloorOffsetObject.GetComponentInChildren<Camera>();
+                if (offsetCam != null)
+                {
+                    headTransform = offsetCam.transform;
+                    return;
+                }
+            }
+
+            var originCam = xrOrigin.GetComponentInChildren<Camera>();
+            if (originCam != null)
+            {
+                headTransform = originCam.transform;
+                return;
+            }
+        }
+
+        // 3. Fallback: Search for any TrackedPoseDriver
+        var trackedPose = Object.FindAnyObjectByType<UnityEngine.InputSystem.XR.TrackedPoseDriver>();
+        if (trackedPose != null)
+        {
+            headTransform = trackedPose.transform;
+            return;
+        }
+
+        // 4. Fallback: Search by XR Rig GameObject name
+        var rigGo = GameObject.Find("Studio XR Rig") ?? GameObject.Find("XR Rig") ?? GameObject.Find("XR Origin");
+        if (rigGo != null)
+        {
+            var rigCam = rigGo.GetComponentInChildren<Camera>();
+            if (rigCam != null)
+            {
+                headTransform = rigCam.transform;
+                return;
+            }
+        }
+
+        // 5. Fallback: Any active Camera in scene
+        var anyCam = Object.FindAnyObjectByType<Camera>();
+        if (anyCam != null)
+        {
+            headTransform = anyCam.transform;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Fade System
+
+    /// <summary> Fade indicator to full visibility (1.0). Safe to call from UnityEvent or Invoke. </summary>
     public void QuickFadeIn()  => StartFade(1f);
 
-    /// <summary> Fade indicator to ambient proximity level (or 0 if proximity disabled). Safe to call from UnityEvent or Invoke. </summary>
-    public void QuickFadeOut() => StartFade(showWhenInProximity ? ComputeProximityAlpha() : 0f);
+    /// <summary> Fade indicator to default/ambient level. Safe to call from UnityEvent or Invoke. </summary>
+    public void QuickFadeOut() => StartFade(showByDefault ? 1f : (whenInProximity ? ComputeProximityFactor() : 0f));
 
     public void StartFade(float target)
     {
+        target = Mathf.Clamp01(target);
+        m_TargetAlpha = target;
+
+        if (fadeDuration <= 0.001f)
+        {
+            StopFade();
+            SetAlpha(target);
+            return;
+        }
+
         StopFade();
         m_Fade = StartCoroutine(FadeRoutine(target));
     }
 
     private IEnumerator FadeRoutine(float target)
     {
-        float start   = m_Alpha;
+        float start = m_Alpha;
         float elapsed = 0f;
         while (elapsed < fadeDuration)
         {
             elapsed += Time.deltaTime;
-            SetProximity(Mathf.Lerp(start, target, Mathf.SmoothStep(0f, 1f, elapsed / fadeDuration)));
+            float t = Mathf.Clamp01(elapsed / fadeDuration);
+            SetAlpha(Mathf.Lerp(start, target, Mathf.SmoothStep(0f, 1f, t)));
             yield return null;
         }
-        SetProximity(target);
+        SetAlpha(target);
         m_Fade = null;
     }
 
     private void StopFade()
     {
-        if (m_Fade != null) { StopCoroutine(m_Fade); m_Fade = null; }
+        if (m_Fade != null)
+        {
+            StopCoroutine(m_Fade);
+            m_Fade = null;
+        }
     }
 
     // -------------------------------------------------------------------------
-    // Alpha / Material
+    // Material & Alpha
 
-    private float ComputeProximityAlpha()
-    {
-        if (headTransform == null || proximityThreshold <= 0f) return 0f;
-        Vector3 center = meshRenderer != null ? meshRenderer.bounds.center : transform.position;
-        return Mathf.Clamp01(1f - Vector3.Distance(headTransform.position, center) / proximityThreshold);
-    }
-
-    public void SetProximity(float value)
+    public void SetAlpha(float value)
     {
         m_Alpha = Mathf.Clamp01(value);
         ApplyMaterial();
     }
+
+    /// <summary> Backward-compatible alias for SetAlpha. </summary>
+    public void SetProximity(float value) => SetAlpha(value);
 
     private void ApplyMaterial()
     {

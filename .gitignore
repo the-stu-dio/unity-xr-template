@@ -5,7 +5,7 @@ stu-dio Template/
 stu-dio Template.meta
 
 #Note, gitignore set up for git repo based in Unity Project Folder, rather than in local Asset folder.
-#I'm leaving it for posterity. Beyond those first few lines, I think this file could be blank.
+#I'm leaving it for posterity. Beyond these first few lines, I think this file could be blank.
 
 #Default Unity .gitignore
 .utmp/

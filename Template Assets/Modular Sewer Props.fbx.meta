@@ -1,29 +1,42 @@
 fileFormatVersion: 2
 guid: e58e58329129f0a43a2d7d34e68d0b52
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277458
+  packageName: Modular Sewer Props
+  packageVersion: 1.0
+  assetPath: Assets/Ata Khani/Modular Sewer Props/Models/Modular Sewer Props.fbx
+  uploadId: 713236
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24501
   internalIDToNameTable: []
   externalObjects:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Cloth_Lights_Glass_Mat
-    second: {fileID: 2100000, guid: 25457f31c571f844d9724200e053c3d0, type: 2}
+    second: {fileID: 2100000, guid: 103c5c541b46ef14fa98c2bec11704cc, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Cloth_Lights_Mat
-    second: {fileID: 2100000, guid: 5f4a62fefb0d2834b86da5d31f79022c, type: 2}
+    second: {fileID: 2100000, guid: 74f1323690306d4429ddf70e2560dc6c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: No Name
+    second: {fileID: 2100000, guid: 236fccadbba5c32429c6526b39ea3546, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Trim_Wood_Mat
-    second: {fileID: 2100000, guid: c43f909d8aa07e644ae31b8724b3ec1c, type: 2}
+    second: {fileID: 2100000, guid: e25c5956df341af4bb71a339521a0642, type: 2}
   materials:
-    materialImportMode: 2
+    materialImportMode: 1
     materialName: 0
     materialSearch: 1
     materialLocation: 1
+    searchTexturesGlobally: 1
   animations:
     legacyGenerateAnimations: 4
     bakeSimulation: 0
@@ -71,6 +84,11 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    importUVs: -1
+    importVertexColors: 1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
@@ -90,6 +108,7 @@ ModelImporter:
     legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
     blendShapeNormalImportMode: 1
     normalSmoothingSource: 0
+    calculateBlendshapeNormalsDeltaFromImportedNormals: 1
   referencedClips: []
   importAnimation: 1
   humanDescription:
@@ -120,10 +139,3 @@ ModelImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 277458
-  packageName: Modular Sewer Props
-  packageVersion: 1.0
-  assetPath: Assets/Ata Khani/Modular Sewer Props/Models/Modular Sewer Props.fbx
-  uploadId: 713236

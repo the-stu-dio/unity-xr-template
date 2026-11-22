@@ -88,17 +88,21 @@ Editor utilities to improve the experience of implementing affordances into an X
 
 ## How-To Guides
 
-### 1. Importing the Unity XRI Toolkit Assets into an Existing Project
+### 1. Importing the Unity XRI Toolkit Assets into an Existing Project (1-Click Setup)
 
-1. Open the existing project in Unity 6.
-2. In **Window > Package Manager**, install or verify these packages:
-   * **XR Interaction Toolkit** (`3.5.1` or later)
-   * **XR Hands** (`1.8.1` or later)
-   * **XR Core Utilities** (`2.6.0` or later)
-   * **Splines** (`2.9.1` or later)
-   * **OpenXR Plugin** and **Meta OpenXR**
-3. In the XR Interaction Toolkit package details, open **Samples** and import **Starter Assets**.
-4. Let Unity finish compiling, then resolve any input actions or scene references before using the toolkit components.
+You can configure all required XR packages, interaction layers, and template assets automatically using the built-in One-Click utility:
+
+1. Copy or clone the `stu-dio XR Template` folder into your project's `Assets/` folder.
+2. Open your project in Unity 6.
+3. In the top menu bar, select:
+   ```text
+   Studio XR > Project Setup & Package Installer
+   ```
+4. Click **Run One-Click Package Setup (Recommended)**.
+   * Automatically adds missing UPM packages (`XR Interaction Toolkit`, `XR Hands`, `Splines`, `OpenXR`, `Meta OpenXR`, etc.) to `Packages/manifest.json`.
+   * Imports the XRI **Starter Assets** sample and **TextMesh Pro Essential Resources**.
+   * Automatically configures the `Teleport` interaction layer (Layer 31) in `InteractionLayerSettings`.
+5. *(Optional)* Click **Install Meta XR SDK** under the **Optional Platform SDKs** card (or select `Studio XR > Install Meta XR SDK (Optional)` from the top menu bar) to configure Meta's official package registry and install the Meta XR Core SDK (`com.meta.xr.sdk.core`).
 
 ### 2. Installing the XRI Character Controller Simulator
 
@@ -128,7 +132,6 @@ Remove the simulator prefab before building for an XR device, or enable **Use XR
    ```text
    Studio XR > Setup Finger Gun System
    ```
-   *(or `Tools > Studio XR > Setup Finger Gun System`)*
 3. The tool automatically:
    * Locates `Right Hand` (or selected hand) and attaches `FingerGunTeleportGesture`.
    * Locates or adds the index `Poke Interactor`.

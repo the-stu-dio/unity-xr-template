@@ -99,7 +99,7 @@ namespace StudioXR.Interaction
         ClimbProvider m_ClimbProvider;
         LocomotionMediator m_LocomotionMediator;
         XROrigin m_XROrigin;
-        CharacterController m_SelectingCharacterController;
+        CharacterController m_ClimbCharacterController;
 
         /// <inheritdoc />
         public bool canProcess => isActiveAndEnabled;
@@ -161,6 +161,20 @@ namespace StudioXR.Interaction
                     TryFindComponent(out m_LocomotionMediator);
                 if (m_XROrigin == null)
                     TryFindComponent(out m_XROrigin);
+
+                // Exclude colliders that belong to teleportation or other interactables so we don't hijack them
+                for (int i = colliders.Count - 1; i >= 0; i--)
+                {
+                    var col = colliders[i];
+                    if (col == null) continue;
+                    var teleportInteractable = col.GetComponent<UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation.BaseTeleportationInteractable>()
+                        ?? col.GetComponentInParent<UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation.BaseTeleportationInteractable>();
+                    if (teleportInteractable != null)
+                    {
+                        colliders.RemoveAt(i);
+                        continue;
+                    }
+                }
 
                 // Ensure mesh colliders are convex so NearFarInteractor's SphereInteractionCaster (hands) can overlap them
                 foreach (var col in colliders)
@@ -409,8 +423,8 @@ namespace StudioXR.Interaction
 
             if (characterController != null)
             {
-                if (m_SelectingCharacterController == null)
-                    m_SelectingCharacterController = characterController;
+                if (m_ClimbCharacterController == null)
+                    m_ClimbCharacterController = characterController;
 
                 StartIgnoringCharacterCollision(characterController);
 
@@ -584,10 +598,10 @@ namespace StudioXR.Interaction
                 RemoveGravityLock();
                 gravityPaused = false;
 
-                if (m_SelectingCharacterController != null)
+                if (m_ClimbCharacterController != null)
                 {
-                    StopIgnoringCharacterCollision(m_SelectingCharacterController);
-                    m_SelectingCharacterController = null;
+                    StopIgnoringCharacterCollision(m_ClimbCharacterController);
+                    m_ClimbCharacterController = null;
                 }
 
                 foreach (var provider in s_ClimbEnabledProvidersToDisable)
@@ -657,9 +671,9 @@ namespace StudioXR.Interaction
                     m_ClimbTransformation.motion = movement;
                     m_LocomotionMediator.bodyTransformer.QueueTransformation(m_ClimbTransformation);
                 }
-                else if (m_SelectingCharacterController != null && m_SelectingCharacterController.enabled)
+                else if (m_ClimbCharacterController != null && m_ClimbCharacterController.enabled)
                 {
-                    m_SelectingCharacterController.Move(movement);
+                    m_ClimbCharacterController.Move(movement);
                 }
                 else if (m_XROrigin != null && m_XROrigin.Origin != null)
                 {

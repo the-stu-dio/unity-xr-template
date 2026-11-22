@@ -16,10 +16,8 @@ namespace StudioXR.Editor
 {
     public static class FingerGunSetupTool
     {
-        [MenuItem("Studio XR/Setup Finger Gun System", false, 10)]
-        [MenuItem("GameObject/Studio XR/Setup Finger Gun System", false, 10)]
-        [MenuItem("Tools/Studio XR/Setup Finger Gun System", false, 10)]
-        public static void CreateFingerGunSystem(MenuCommand menuCommand)
+        [MenuItem("Studio XR/Setup Finger Gun System", false, 50)]
+        public static void CreateFingerGunSystem(MenuCommand menuCommand = null)
         {
             GameObject contextObj = menuCommand?.context as GameObject ?? Selection.activeGameObject;
             GameObject targetHand = ResolveTargetHand(contextObj);
@@ -270,24 +268,31 @@ namespace StudioXR.Editor
             lineRenderer.useWorldSpace = true;
             lineRenderer.widthMultiplier = 0.02f;
 
-            var blinkMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/VRTemplateAssets/Materials/Locomotion/BlinkLine.mat");
-            if (blinkMat != null)
+            // Load self-contained Studio XR Teleport Ray material
+            string rayMatPath = AssetDatabase.GUIDToAssetPath("58e17a3a9bf841b8a514d2ec3f68a110");
+            var rayMat = !string.IsNullOrEmpty(rayMatPath) ? AssetDatabase.LoadAssetAtPath<Material>(rayMatPath) : null;
+            if (rayMat == null)
             {
-                lineRenderer.sharedMaterial = blinkMat;
+                rayMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/stu-dio XR Template/XR Assets/Source/Materials/StudioXR_TeleportRay.mat");
+            }
+            if (rayMat != null)
+            {
+                lineRenderer.sharedMaterial = rayMat;
             }
             else
             {
-                var unlitShader = Shader.Find("Universal Render Pipeline/Unlit");
-                if (unlitShader != null)
+                var particlesShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+                if (particlesShader != null)
                 {
-                    var mat = new Material(unlitShader);
-                    mat.color = new Color(0.125f, 0.588f, 0.953f, 0.8f);
+                    var mat = new Material(particlesShader);
+                    mat.color = Color.white;
                     lineRenderer.sharedMaterial = mat;
                 }
             }
 
             var lineVisual = rayObj.AddComponent<XRInteractorLineVisual>();
             lineVisual.lineWidth = 0.02f;
+            lineVisual.overrideInteractorLineOrigin = false;
             lineVisual.overrideInteractorLineLength = false;
             lineVisual.useDistanceToHitAsMaxLineLength = true;
             lineVisual.lineRetractionDelay = 0.25f;
@@ -299,11 +304,26 @@ namespace StudioXR.Editor
             lineVisual.snapEndpointIfAvailable = true;
             lineVisual.lineBendRatio = 0.5f;
 
-            var reticlePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Samples/XR Interaction Toolkit/3.4.1/Starter Assets/Prefabs/Teleport/Directional Teleport Reticle.prefab");
+            // Load reticle prefabs by GUID first, then fallback to search
+            string reticlePath = AssetDatabase.GUIDToAssetPath("893219773891c784ab469a39151879b4");
+            var reticlePrefab = !string.IsNullOrEmpty(reticlePath) ? AssetDatabase.LoadAssetAtPath<GameObject>(reticlePath) : null;
+            if (reticlePrefab == null)
+            {
+                string[] guids = AssetDatabase.FindAssets("Directional Teleport Reticle t:Prefab");
+                if (guids.Length > 0)
+                    reticlePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guids[0]));
+            }
             if (reticlePrefab != null)
                 lineVisual.reticle = reticlePrefab;
 
-            var blockedReticlePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Samples/XR Interaction Toolkit/3.4.1/Starter Assets/Prefabs/Teleport/Blocking Teleport Reticle.prefab");
+            string blockedReticlePath = AssetDatabase.GUIDToAssetPath("a3fde713df4d99042a0403c4be9eea32");
+            var blockedReticlePrefab = !string.IsNullOrEmpty(blockedReticlePath) ? AssetDatabase.LoadAssetAtPath<GameObject>(blockedReticlePath) : null;
+            if (blockedReticlePrefab == null)
+            {
+                string[] guids = AssetDatabase.FindAssets("Blocking Teleport Reticle t:Prefab");
+                if (guids.Length > 0)
+                    blockedReticlePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guids[0]));
+            }
             if (blockedReticlePrefab != null)
                 lineVisual.blockedReticle = blockedReticlePrefab;
 

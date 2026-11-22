@@ -26,6 +26,7 @@ public class GhostFootsteps : MonoBehaviour
     {
         public Transform tr;
         public MeshRenderer mr;
+        public MeshFilter mf;
     }
 
     // -------------------------------------------------------------------------
@@ -42,11 +43,15 @@ public class GhostFootsteps : MonoBehaviour
     [SerializeField] private int m_StepCount = 12;
     [SerializeField] private float m_StepWidth = 0.18f;           // lateral L/R offset from spline centre (metres)
     [SerializeField] private float m_FloorSnapDistance = 2f;      // max raycast length below sample point
+    [Tooltip("Height offset above floor surface along the ground normal to prevent clipping / Z-fighting.")]
+    [SerializeField] private float m_FloorOffset = 0.015f;        // default 1.5 cm clearance
     [SerializeField] private LayerMask m_FloorLayers = ~0;
 
     [Header("Footstep Visuals")]
     [Tooltip("Leave empty for default procedural quad.")]
     [SerializeField] private Mesh m_FootstepMesh;                 
+    [Tooltip("Optional custom material. If null, uses default URP Unlit transparent material.")]
+    [SerializeField] private Material m_FootstepMaterial;
     [SerializeField] private Vector3 m_StepScale = new Vector3(0.12f, 0.001f, 0.18f);
 
     [Header("Animation")]
@@ -179,6 +184,32 @@ public class GhostFootsteps : MonoBehaviour
     public void Deactivate() => IsActive = false;
     public void QuickFadeIn() => StartFade(1f);
     public void QuickFadeOut() => StartFade(0f);
+
+    /// <summary>
+    /// Gets or sets the floor offset clearance (in metres) to prevent Z-fighting.
+    /// </summary>
+    public float FloorOffset
+    {
+        get => m_FloorOffset;
+        set
+        {
+            m_FloorOffset = value;
+            RebuildSteps();
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the footstep visual material.
+    /// </summary>
+    public Material FootstepMaterial
+    {
+        get => m_FootstepMaterial;
+        set
+        {
+            m_FootstepMaterial = value;
+            RebuildSteps();
+        }
+    }
 
     /// <summary>
     /// Gets or sets the target destination Transform.
@@ -332,6 +363,25 @@ public class GhostFootsteps : MonoBehaviour
     // -------------------------------------------------------------------------
     // Step Construction & Object Pooling
 
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (!Application.isPlaying && m_Spline != null && m_Spline.Splines != null && m_Spline.Splines.Count > 0)
+        {
+            UnityEditor.EditorApplication.delayCall -= DelayRebuild;
+            UnityEditor.EditorApplication.delayCall += DelayRebuild;
+        }
+    }
+
+    private void DelayRebuild()
+    {
+        if (this != null && gameObject != null && !Application.isPlaying)
+        {
+            RebuildSteps();
+        }
+    }
+#endif
+
     /// <summary>
     /// Re-evaluates positions along the spline. Reuses GameObjects from the pool 
     /// instead of destroying and instantiating to prevent GC spikes in Dynamic mode.
@@ -345,7 +395,7 @@ public class GhostFootsteps : MonoBehaviour
 
         int count = Mathf.Max(2, m_StepCount);
 
-        // Resize array and destroy leftovers if step count changed
+        // Adopt or resize array
         if (m_Steps == null || m_Steps.Length != count)
         {
             if (m_Steps != null)
@@ -361,23 +411,46 @@ public class GhostFootsteps : MonoBehaviour
             }
             else
             {
-                for (int c = transform.childCount - 1; c >= 0; c--)
+                var existingChildren = new System.Collections.Generic.List<Transform>();
+                for (int c = 0; c < transform.childCount; c++)
                 {
                     var child = transform.GetChild(c);
                     if (child.name.StartsWith("Step_"))
+                        existingChildren.Add(child);
+                }
+
+                if (existingChildren.Count == count)
+                {
+                    m_Steps = new FootstepSlot[count];
+                    for (int i = 0; i < count; i++)
                     {
-                        if (Application.isPlaying) Destroy(child.gameObject);
-                        else DestroyImmediate(child.gameObject);
+                        var tr = existingChildren[i];
+                        m_Steps[i] = new FootstepSlot
+                        {
+                            tr = tr,
+                            mr = tr.GetComponent<MeshRenderer>(),
+                            mf = tr.GetComponent<MeshFilter>()
+                        };
+                    }
+                }
+                else
+                {
+                    for (int i = existingChildren.Count - 1; i >= 0; i--)
+                    {
+                        if (Application.isPlaying) Destroy(existingChildren[i].gameObject);
+                        else DestroyImmediate(existingChildren[i].gameObject);
                     }
                 }
             }
-            m_Steps = new FootstepSlot[count];
+
+            if (m_Steps == null || m_Steps.Length != count)
+                m_Steps = new FootstepSlot[count];
         }
 
         // Cache rendering parameters
         if (m_PropBlock == null) m_PropBlock = new MaterialPropertyBlock();
         if (m_FallbackMaterial == null) m_FallbackMaterial = CreateDefaultMaterial();
-        Material sharedMat = m_FallbackMaterial;
+        Material sharedMat = m_FootstepMaterial != null ? m_FootstepMaterial : m_FallbackMaterial;
 
         if (!m_ColorPropResolved)
         {
@@ -393,6 +466,9 @@ public class GhostFootsteps : MonoBehaviour
             sharedMesh = m_FallbackMesh;
         }
 
+        float rayUp = Mathf.Max(2f, m_FloorSnapDistance);
+        float rayDist = rayUp + m_FloorSnapDistance;
+
         for (int i = 0; i < count; i++)
         {
             float t = (float)i / (count - 1);    // 0..1 normalised along spline
@@ -402,20 +478,55 @@ public class GhostFootsteps : MonoBehaviour
             Vector3 worldTan = m_Spline.transform.TransformDirection((Vector3)localTan).normalized;
             if (worldTan.sqrMagnitude < 0.0001f) worldTan = Vector3.forward;
 
-            bool isLeft = (i % 2) == 0;
-            Vector3 lateral = Vector3.Cross(worldTan, Vector3.up).normalized * (isLeft ? -m_StepWidth : m_StepWidth);
-            Vector3 stepPos = worldPos + lateral;
+            // 1. First probe ground at spline center
+            Vector3 centerRayStart = worldPos + Vector3.up * rayUp;
+            Vector3 surfaceCenter = worldPos;
+            Vector3 groundNormal = Vector3.up;
 
-            // Snap to floor surface
-            if (Physics.Raycast(stepPos + Vector3.up * 0.5f, Vector3.down, out RaycastHit hit, m_FloorSnapDistance + 0.5f, m_FloorLayers))
-                stepPos = hit.point + Vector3.up * 0.002f; // Slight offset to prevent Z-fighting
+            if (Physics.Raycast(centerRayStart, Vector3.down, out RaycastHit centerHit, rayDist, m_FloorLayers, QueryTriggerInteraction.Ignore))
+            {
+                surfaceCenter = centerHit.point;
+                groundNormal = centerHit.normal;
+            }
+
+            // 2. Compute surface-tangent forward and lateral vectors on the ground plane
+            Vector3 forward = Vector3.ProjectOnPlane(worldTan, groundNormal).normalized;
+            if (forward.sqrMagnitude < 0.0001f)
+                forward = Vector3.ProjectOnPlane(Vector3.forward, groundNormal).normalized;
+            if (forward.sqrMagnitude < 0.0001f)
+                forward = Vector3.forward;
+
+            Vector3 right = Vector3.Cross(groundNormal, forward).normalized;
+            bool isLeft = (i % 2) == 0;
+            Vector3 lateralOffset = right * (isLeft ? -m_StepWidth : m_StepWidth);
+            Vector3 stepPos = surfaceCenter + lateralOffset;
+
+            // 3. Second raycast directly at footstep lateral position to conform to local surface slope/bumps
+            if (Physics.Raycast(stepPos + Vector3.up * rayUp, Vector3.down, out RaycastHit stepHit, rayDist, m_FloorLayers, QueryTriggerInteraction.Ignore))
+            {
+                groundNormal = stepHit.normal;
+                stepPos = stepHit.point + groundNormal * m_FloorOffset;
+            }
+            else
+            {
+                stepPos += groundNormal * m_FloorOffset;
+            }
+
+            // 4. Align orientation to the local surface normal and path direction
+            forward = Vector3.ProjectOnPlane(worldTan, groundNormal).normalized;
+            if (forward.sqrMagnitude < 0.0001f)
+                forward = Vector3.ProjectOnPlane(Vector3.forward, groundNormal).normalized;
+            if (forward.sqrMagnitude < 0.0001f)
+                forward = Vector3.forward;
+
+            Quaternion stepRot = Quaternion.LookRotation(forward, groundNormal);
 
             // Object Pooling: Create new step only if it doesn't exist
             if (m_Steps[i].tr == null)
             {
                 var go = new GameObject($"Step_{i:D2}_{(isLeft ? "L" : "R")}");
                 go.transform.SetParent(transform, false); // false preserves local scale
-                
+
                 var mf = go.AddComponent<MeshFilter>();
                 mf.sharedMesh = sharedMesh;
 
@@ -424,12 +535,19 @@ public class GhostFootsteps : MonoBehaviour
                 mr.receiveShadows = false;
                 mr.sharedMaterial = sharedMat;
 
-                m_Steps[i] = new FootstepSlot { tr = go.transform, mr = mr };
+                m_Steps[i] = new FootstepSlot { tr = go.transform, mr = mr, mf = mf };
+            }
+            else
+            {
+                if (m_Steps[i].mf != null && m_Steps[i].mf.sharedMesh != sharedMesh)
+                    m_Steps[i].mf.sharedMesh = sharedMesh;
+                if (m_Steps[i].mr != null && m_Steps[i].mr.sharedMaterial != sharedMat)
+                    m_Steps[i].mr.sharedMaterial = sharedMat;
             }
 
             // Update transform
             m_Steps[i].tr.position = stepPos;
-            m_Steps[i].tr.rotation = Quaternion.LookRotation(worldTan, Vector3.up);
+            m_Steps[i].tr.rotation = stepRot;
             m_Steps[i].tr.localScale = isLeft ? m_StepScale : new Vector3(-m_StepScale.x, m_StepScale.y, m_StepScale.z);
 
             // Hide immediately to prevent frame-1 flicker when playing; show in editor
@@ -842,6 +960,9 @@ public class GhostFootsteps : MonoBehaviour
         mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
         mat.SetOverrideTag("RenderType", "Transparent");
         mat.renderQueue = 3000;
+
+        // Double-sided rendering so mirrored scale and ground slope views don't cull
+        if (mat.HasProperty("_Cull")) mat.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
 
         // Standard alpha-blend factors for URP Unlit
         if (mat.HasProperty("_SrcBlend"))    mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
